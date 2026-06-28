@@ -15,8 +15,67 @@ var _world_node: Node2D = null
 
 func _ready() -> void:
 	print("=== VALDORIA — Multi-World ===")
+	
+	# Try to load save
+	var sm := get_node_or_null("/root/SaveManager")
+	if sm and sm.has_save():
+		var data: Dictionary = sm.load_game() as Dictionary
+		if not data.is_empty():
+			_current_map_id = data.get("map_id", "black_oak_farm")
+			_load_map(_current_map_id)
+			await get_tree().process_frame
+			_apply_loaded_data(data)
+			print("=== READY (loaded) ===")
+			return
+	
 	_load_map(_current_map_id)
 	print("=== READY ===")
+
+
+func _apply_loaded_data(data: Dictionary) -> void:
+	if not _player_node: return
+	_player_node.set("level", data.get("level", 1))
+	_player_node.set("xp", data.get("xp", 0))
+	_player_node.set("xp_to_next_level", data.get("xp_to_next", 30))
+	_player_node.set("base_hp", data.get("base_hp", 100))
+	_player_node.set("base_damage", data.get("base_damage", 10))
+	_player_node.set("base_speed", data.get("base_speed", 200.0))
+	_player_node.set("max_hp", data.get("max_hp", 100))
+	_player_node.set("current_hp", max(data.get("current_hp", 100), 1))
+	_player_node.set("attack_damage", data.get("attack_damage", 10))
+	_player_node.set("move_speed", data.get("move_speed", 200.0))
+	_player_node.set("gold", data.get("gold", 0))
+	_player_node.health_changed.emit(_player_node.current_hp, _player_node.max_hp)
+	_player_node.xp_changed.emit(_player_node.xp, _player_node.xp_to_next_level)
+	_player_node.gold_changed.emit(_player_node.gold)
+	
+	# Restore equipment
+	var ItemDataClass = preload("res://scripts/items/ItemData.gd")
+	var eq: Dictionary = data.get("equipment", {})
+	for slot in eq:
+		var def := eq[slot] as Dictionary
+		var item = ItemDataClass.create_equipment_from_def({
+			"id": def.id, "name": def["name"], "slot": def.slot,
+			"rarity": def.rarity, "value": def.value,
+			"dmg": def.dmg, "hp": def.hp, "spd": def.spd,
+		})
+		_player_node.equipment[slot] = item
+	_player_node._recalc_equip_stats()
+	
+	# Restore inventory
+	var inv := get_node_or_null("/root/Inventory")
+	if inv:
+		inv.clear()
+		var items: Array = data.get("inventory", [])
+		for idata in items:
+			var def := idata as Dictionary
+			if def.get("slot", "").is_empty(): continue
+			var item = ItemDataClass.create_equipment_from_def({
+				"id": def.id, "name": def["name"], "slot": def.slot,
+				"rarity": def.get("rarity","common"), "value": def.get("value",0),
+				"dmg": def.get("dmg",0), "hp": def.get("hp",0), "spd": def.get("spd",0),
+			})
+			inv.add_item(item)
 
 
 func _load_tex(path: String) -> Texture2D:
@@ -730,22 +789,63 @@ func _build_ui() -> void:
 	# Buttons
 	var mbr := MarginContainer.new(); mbr.name = "ButtonContainer"
 	mbr.anchor_left = 1.0; mbr.anchor_top = 1.0; mbr.anchor_right = 1.0; mbr.anchor_bottom = 1.0
-	mbr.offset_left = -280.0; mbr.offset_top = -140.0
+	mbr.offset_left = -400.0; mbr.offset_top = -140.0
 	mbr.add_theme_constant_override("margin_right", 16); mbr.add_theme_constant_override("margin_bottom", 16)
 	ui.add_child(mbr)
 	var hbx := HBoxContainer.new(); hbx.name = "HBoxContainer"
-	hbx.add_theme_constant_override("separation", 12); mbr.add_child(hbx)
+	hbx.add_theme_constant_override("separation", 8); mbr.add_child(hbx)
+
+	# Gold display (persistent)
+	var goldbox := VBoxContainer.new(); goldbox.name = "GoldBox"
+	var gl := Label.new(); gl.name = "HUDGold"
+	gl.text = "Oro: %d" % (_player_node.gold if _player_node else 0)
+	gl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+	gl.add_theme_font_size_override("font_size", 13)
+	goldbox.add_child(gl)
+	if _player_node and _player_node.has_signal("gold_changed"):
+		_player_node.gold_changed.connect(func(g: int): gl.text = "Oro: %d" % g)
+	hbx.add_child(goldbox)
 
 	var invb := Button.new(); invb.name = "InventoryButton"; invb.text = "Zaino (I)"
-	invb.custom_minimum_size = Vector2(130, 56); hbx.add_child(invb)
+	invb.custom_minimum_size = Vector2(110, 50); hbx.add_child(invb)
 
 	var atkb := Button.new(); atkb.name = "AttackButton"; atkb.text = "Attacca"
-	atkb.custom_minimum_size = Vector2(110, 56); hbx.add_child(atkb)
+	atkb.custom_minimum_size = Vector2(100, 50); hbx.add_child(atkb)
 
 	# Map switch button
 	var mapb := Button.new(); mapb.name = "MapButton"; mapb.text = "Mappe"
-	mapb.custom_minimum_size = Vector2(80, 56); hbx.add_child(mapb)
+	mapb.custom_minimum_size = Vector2(70, 50); hbx.add_child(mapb)
 	mapb.pressed.connect(_show_map_menu.bind(ui))
+
+	# Save/Load buttons
+	var svb := Button.new(); svb.name = "SaveButton"; svb.text = "S"
+	svb.custom_minimum_size = Vector2(40, 50)
+	svb.pressed.connect(_save_current_game)
+	hbx.add_child(svb)
+	var ldb := Button.new(); ldb.name = "LoadButton"; ldb.text = "L"
+	ldb.custom_minimum_size = Vector2(40, 50)
+	ldb.pressed.connect(_load_saved_game)
+	hbx.add_child(ldb)
+
+	# Minimap (top-right corner)
+	var minimap := Control.new(); minimap.name = "Minimap"
+	minimap.anchor_left = 1.0; minimap.anchor_top = 0.0
+	minimap.anchor_right = 1.0; minimap.anchor_bottom = 0.0
+	minimap.offset_left = -170.0; minimap.offset_top = 10.0
+	minimap.offset_right = -10.0; minimap.offset_bottom = 170.0
+	ui.add_child(minimap)
+
+	var mmbg := ColorRect.new(); mmbg.name = "MMBg"
+	mmbg.anchor_right = 1.0; mmbg.anchor_bottom = 1.0
+	mmbg.color = Color(0.02, 0.05, 0.12, 0.85)
+	minimap.add_child(mmbg)
+
+	var mml := Label.new(); mml.name = "MMLabel"
+	mml.anchor_top = 1.0; mml.anchor_bottom = 1.0
+	mml.offset_top = -16.0; mml.add_theme_font_size_override("font_size", 10)
+	mml.add_theme_color_override("font_color", Color(0.5, 0.8, 1.0))
+	mml.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	minimap.add_child(mml)
 
 	# Inventory panel (enhanced with equipment + gold)
 	var pnl := Panel.new(); pnl.name = "InventoryPanel"
@@ -977,3 +1077,49 @@ func _on_player_move(world_pos: Vector2) -> void:
 	tween.tween_callback(dot.queue_free)
 	if _player_node and _player_node.has_method("_on_move_command"):
 		_player_node._on_move_command(world_pos)
+
+
+func _update_minimap() -> void:
+	var ui := get_node_or_null("GameUI")
+	if not ui: return
+	var mm := ui.get_node_or_null("Minimap") as Control
+	if not mm: return
+	var mml := mm.get_node_or_null("MMLabel") as Label
+	if not mml: return
+	
+	var enemy_count := 0
+	for child in get_children():
+		if child is CharacterBody2D and child.has_method("is_dead") and not child.is_dead() and child != _player_node:
+			enemy_count += 1
+	
+	mml.text = "Nemici: %d | Oro: %d" % [enemy_count, _player_node.gold if _player_node else 0]
+
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("save_game"):
+		_save_current_game()
+	if event.is_action_pressed("load_game"):
+		_load_saved_game()
+
+
+func _save_current_game() -> void:
+	var sm := get_node_or_null("/root/SaveManager")
+	if sm and _player_node:
+		sm.save_game(_player_node, _current_map_id)
+		if has_node("GameUI") and $GameUI.has_method("show_debug_message"):
+			$GameUI.show_debug_message("Partita salvata! (Liv.%d, %d oro)" % [_player_node.level, _player_node.gold])
+
+
+func _load_saved_game() -> void:
+	var sm := get_node_or_null("/root/SaveManager")
+	if sm and sm.has_save():
+		var data: Dictionary = sm.load_game() as Dictionary
+		if not data.is_empty():
+			_current_map_id = data.get("map_id", "black_oak_farm")
+			_load_map(_current_map_id)
+			await get_tree().process_frame
+			_apply_loaded_data(data)
+
+
+func _process(_delta: float) -> void:
+	_update_minimap()

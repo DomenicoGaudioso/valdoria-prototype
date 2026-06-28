@@ -21,6 +21,7 @@ config/icon="res://assets/icons/icon.svg"
 InputController="*res://scripts/input/InputController.gd"
 Inventory="*res://scripts/inventory/Inventory.gd"
 PlayerData="*res://scripts/progression/ClassData.gd"
+SaveManager="*res://scripts/systems/SaveManager.gd"
 
 [display]
 
@@ -64,6 +65,22 @@ interact={
 "deadzone": 0.5,
 "events": [{
 "keycode": 69,
+"pressed": true,
+"type": "InputEventKey"
+}]
+}
+save_game={
+"deadzone": 0.5,
+"events": [{
+"keycode": 116,
+"pressed": true,
+"type": "InputEventKey"
+}]
+}
+load_game={
+"deadzone": 0.5,
+"events": [{
+"keycode": 120,
 "pressed": true,
 "type": "InputEventKey"
 }]
