@@ -1,0 +1,89 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Valdoria Prototype"
+config/version="0.1.0"
+run/main_scene="res://scenes/main/Main.tscn"
+config/features=PackedStringArray("4.7")
+config/icon="res://assets/icons/icon.svg"
+
+[autoload]
+
+InputController="*res://scripts/input/InputController.gd"
+Inventory="*res://scripts/inventory/Inventory.gd"
+PlayerData="*res://scripts/progression/ClassData.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/mode=2
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[input]
+
+move_click={
+"deadzone": 0.5,
+"events": [{
+"button_index": 1,
+"pressed": true,
+"type": "InputEventMouseButton"
+}]
+}
+toggle_inventory={
+"deadzone": 0.5,
+"events": [{
+"keycode": 73,
+"pressed": true,
+"type": "InputEventKey"
+}]
+}
+attack={
+"deadzone": 0.5,
+"events": [{
+"keycode": 32,
+"pressed": true,
+"type": "InputEventKey"
+}, {
+"button_index": 2,
+"pressed": true,
+"type": "InputEventMouseButton"
+}]
+}
+interact={
+"deadzone": 0.5,
+"events": [{
+"keycode": 69,
+"pressed": true,
+"type": "InputEventKey"
+}]
+}
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[layer_names]
+
+2d_physics/layer_1="world"
+2d_physics/layer_2="player"
+2d_physics/layer_3="enemies"
+2d_physics/layer_4="items"
+2d_physics/layer_5="ui"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.02, 0.05, 0.15, 1)
+quality/driver/driver_name="GLES3"

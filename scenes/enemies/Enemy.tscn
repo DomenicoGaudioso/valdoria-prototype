@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/Enemy.gd" id="1_hpe7p"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_k7o7a"]
+radius = 18.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_8axbs"]
+radius = 200.0
+
+[node name="Enemy" type="CharacterBody2D" unique_id=827310480]
+script = ExtResource("1_hpe7p")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1043393410]
+shape = SubResource("CircleShape2D_k7o7a")
+
+[node name="Shadow" type="Sprite2D" parent="." unique_id=1153658354]
+z_index = -1
+position = Vector2(0, 30)
+scale = Vector2(1.2, 1.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=721464728]
+position = Vector2(0, -32)
+region_enabled = true
+region_rect = Rect2(0, 0, 64, 64)
+
+[node name="DetectionArea" type="Area2D" parent="." unique_id=797304259]
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DetectionArea" unique_id=2124495039]
+shape = SubResource("CircleShape2D_8axbs")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1070048006]

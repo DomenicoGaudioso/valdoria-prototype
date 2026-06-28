@@ -1,0 +1,59 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/World.gd" id="1_6eebf"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/Enemy.tscn" id="2_gbddb"]
+[ext_resource type="PackedScene" path="res://scenes/items/DroppedItem.tscn" id="3_qxiha"]
+
+[node name="World" type="Node2D" unique_id=513722155]
+script = ExtResource("1_6eebf")
+enemy_scene = ExtResource("2_gbddb")
+dropped_item_scene = ExtResource("3_qxiha")
+
+[node name="Terrain" type="Node2D" parent="." unique_id=80317134]
+
+[node name="Ground" type="Sprite2D" parent="Terrain" unique_id=232383501]
+z_index = -10
+scale = Vector2(25, 18.75)
+centered = false
+
+[node name="Path" type="Sprite2D" parent="Terrain" unique_id=1837128638]
+z_index = -9
+position = Vector2(0, 500)
+scale = Vector2(25, 2)
+centered = false
+
+[node name="Rock1" type="Sprite2D" parent="Terrain" unique_id=1775843454]
+position = Vector2(300, 600)
+scale = Vector2(2.5, 2.5)
+
+[node name="Rock2" type="Sprite2D" parent="Terrain" unique_id=1724988898]
+position = Vector2(900, 300)
+scale = Vector2(2, 2)
+
+[node name="Rock3" type="Sprite2D" parent="Terrain" unique_id=1406412119]
+position = Vector2(600, 700)
+scale = Vector2(1.8, 1.8)
+
+[node name="Rock4" type="Sprite2D" parent="Terrain" unique_id=827589468]
+position = Vector2(1200, 550)
+scale = Vector2(3, 3)
+
+[node name="Rock5" type="Sprite2D" parent="Terrain" unique_id=1803997076]
+position = Vector2(200, 350)
+scale = Vector2(1.5, 1.5)
+
+[node name="Rock6" type="Sprite2D" parent="Terrain" unique_id=2146723757]
+position = Vector2(1100, 800)
+scale = Vector2(2.2, 2.2)
+
+[node name="Ruin1" type="Sprite2D" parent="Terrain" unique_id=211997736]
+position = Vector2(950, 680)
+scale = Vector2(4, 3)
+
+[node name="Ruin2" type="Sprite2D" parent="Terrain" unique_id=831252394]
+position = Vector2(1250, 450)
+scale = Vector2(3, 2.5)
+
+[node name="Ruin3" type="Sprite2D" parent="Terrain" unique_id=962668362]
+position = Vector2(400, 800)
+scale = Vector2(2.5, 2)

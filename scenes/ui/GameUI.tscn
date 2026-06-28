@@ -1,0 +1,121 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/GameUI.gd" id="1_r8hcy"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3pxe2"]
+bg_color = Color(0.06, 0.06, 0.1, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.45, 0.38, 0.25, 1)
+
+[node name="GameUI" type="CanvasLayer" unique_id=435493392]
+script = ExtResource("1_r8hcy")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=435993756]
+offset_right = 300.0
+offset_bottom = 80.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=523902739]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=2043808092]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+text = "VITA"
+
+[node name="HealthBar" type="ProgressBar" parent="MarginContainer/VBoxContainer" unique_id=691413529]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 24)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="HealthLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1570341876]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+text = "100 / 100"
+
+[node name="ButtonContainer" type="MarginContainer" parent="." unique_id=514827014]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -250.0
+offset_top = -120.0
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ButtonContainer" unique_id=278158553]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="InventoryButton" type="Button" parent="ButtonContainer/HBoxContainer" unique_id=874068499]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 52)
+layout_mode = 2
+text = "Zaino (I)"
+
+[node name="AttackButton" type="Button" parent="ButtonContainer/HBoxContainer" unique_id=509707411]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 52)
+layout_mode = 2
+text = "Attacca"
+
+[node name="InventoryPanel" type="Panel" parent="." unique_id=1753817131]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -300.0
+offset_right = 220.0
+offset_bottom = 300.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_3pxe2")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="InventoryPanel" unique_id=1302537397]
+layout_mode = 0
+anchor_left = 0.05
+anchor_top = 0.05
+anchor_right = 0.95
+anchor_bottom = 0.95
+
+[node name="Title" type="Label" parent="InventoryPanel/VBoxContainer" unique_id=678968975]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.85, 0.78, 0.55, 1)
+text = "INVENTARIO"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="InventoryPanel/VBoxContainer" unique_id=1561778423]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="InventoryList" type="VBoxContainer" parent="InventoryPanel/VBoxContainer/ScrollContainer" unique_id=1877330717]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CloseButton" type="Button" parent="InventoryPanel/VBoxContainer" unique_id=74950426]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Chiudi"
+
+[node name="DebugLabel" type="Label" parent="." unique_id=38004270]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 1, 0, 1)
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_bottom = -80.0

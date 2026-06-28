@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player/Player.gd" id="1_wr5hl"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_gfjak"]
+radius = 22.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_4kuee"]
+radius = 60.0
+
+[node name="Player" type="CharacterBody2D" unique_id=714959023]
+script = ExtResource("1_wr5hl")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1953697317]
+shape = SubResource("CircleShape2D_gfjak")
+
+[node name="Shadow" type="Sprite2D" parent="." unique_id=2023965407]
+z_index = -1
+position = Vector2(0, 30)
+scale = Vector2(1.2, 1.2)
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1305160559]
+position = Vector2(0, -32)
+region_enabled = true
+region_rect = Rect2(0, 0, 64, 64)
+
+[node name="AttackArea" type="Area2D" parent="." unique_id=81331096]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea" unique_id=72632648]
+shape = SubResource("CircleShape2D_4kuee")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=317118267]
