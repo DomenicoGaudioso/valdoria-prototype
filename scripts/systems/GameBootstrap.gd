@@ -563,11 +563,36 @@ func _on_enemy_killed(xp_val: int, enemy_name: String) -> void:
 	if _player_node and _player_node.has_method("gain_xp"):
 		_player_node.gain_xp(xp_val)
 	
-	# Find the enemy's tier from its loot_table
-	var enemy := get_node_or_null(enemy_name) if has_node(enemy_name) else null
+	# Guaranteed gold drop (scaled by XP)
+	var gold_amount: int = maxi(1, xp_val / 3 + randi() % maxi(1, xp_val / 2))
+	if _player_node and _player_node.has_method("add_gold"):
+		_player_node.add_gold(gold_amount)
+	
+	# Find enemy node for position
+	var enemy_node: Node2D
+	for child in get_children():
+		if child.has_method("is_dead") and child.is_dead() and child.name == enemy_name:
+			enemy_node = child as Node2D
+			break
+	if not enemy_node:
+		enemy_node = _player_node
+	
+	# Gold visual
+	var gl := Label.new(); gl.name = "GoldLabel"
+	gl.position = enemy_node.position + Vector2(randf_range(-20,20), randf_range(-40,-10))
+	gl.text = "+%d ORO" % gold_amount
+	gl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+	gl.add_theme_font_size_override("font_size", 14)
+	gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gl.z_index = 9999
+	add_child(gl)
+	var tw := create_tween()
+	tw.tween_property(gl, "position:y", gl.position.y - 50, 1.5)
+	tw.parallel().tween_property(gl, "modulate:a", 0.0, 1.5)
+	tw.tween_callback(gl.queue_free)
 	
 	if has_node("GameUI") and $GameUI.has_method("show_debug_message"):
-		$GameUI.show_debug_message("+%d XP — %s ucciso!" % [xp_val, enemy_name])
+		$GameUI.show_debug_message("+%d XP +%d ORO — %s ucciso!" % [xp_val, gold_amount, enemy_name])
 
 
 # ===== PORTALS (Solo Leveling Gates) =====
@@ -645,32 +670,34 @@ func _on_portal_clicked(event: InputEvent, _pos: Vector2, _mouse: int, _shape: i
 func _on_drop(item_data, enemy: Node) -> void:
 	if not item_data:
 		return
-	if item_data is Dictionary and item_data.has("type") and item_data.type == "gold":
-		# Gold drop
-		var amount: int = item_data.amount
-		if _player_node and _player_node.has_method("add_gold"):
-			_player_node.add_gold(amount)
-		# Gold visual
-		var gl := Label.new(); gl.name = "GoldLabel"
-		gl.position = enemy.position + Vector2(randf_range(-20,20), randf_range(-40,-10))
-		gl.text = "+%d ORO" % amount
-		gl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
-		gl.add_theme_font_size_override("font_size", 14)
-		gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		add_child(gl)
-		var tw := create_tween()
-		tw.tween_property(gl, "position:y", gl.position.y - 40, 1.2)
-		tw.parallel().tween_property(gl, "modulate:a", 0.0, 1.2)
-		tw.tween_callback(gl.queue_free)
-		return
+	
+	# Check if it's a Dictionary (from generate_random_loot)
+	if typeof(item_data) == TYPE_DICTIONARY:
+		var d: Dictionary = item_data as Dictionary
+		if d.get("type", "") == "gold":
+			var amount: int = d.get("amount", 0)
+			if _player_node and _player_node.has_method("add_gold") and amount > 0:
+				_player_node.add_gold(amount)
+			# Gold visual
+			var gl := Label.new(); gl.name = "GoldLabel"
+			gl.position = enemy.position + Vector2(randf_range(-20,20), randf_range(-40,-10))
+			gl.text = "+%d ORO" % amount
+			gl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+			gl.add_theme_font_size_override("font_size", 14)
+			gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			add_child(gl)
+			var tw := create_tween()
+			tw.tween_property(gl, "position:y", gl.position.y - 40, 1.2)
+			tw.parallel().tween_property(gl, "modulate:a", 0.0, 1.2)
+			tw.tween_callback(gl.queue_free)
+			return
+		
+		if d.get("type", "") == "equip":
+			var equip = ItemDataClass.create_equipment_from_def(d["def"])
+			_spawn_dropped_equip(equip, enemy.position)
+			return
 
-	if item_data is Dictionary and item_data.has("type") and item_data.type == "equip":
-		# Equipment item from definition
-		var equip = ItemDataClass.create_equipment_from_def(item_data["def"])
-		_spawn_dropped_equip(equip, enemy.position)
-		return
-
-	# Standard item
+	# Standard item (ItemData Resource)
 	_spawn_dropped_equip(item_data, enemy.position)
 
 
