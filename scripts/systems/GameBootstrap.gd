@@ -199,6 +199,34 @@ func _tile_params(gid: int) -> Dictionary:
 			r.tex = _get_tex("res://assets/flare/tilesets/snowplains.png")
 			r.region = Rect2((idx % 16) * 192, int(idx / 16) * 384, 192, 384)
 			r.type = "ground"
+
+	elif _tileset_type == "dungeon":
+		if gid >= 284:
+			var idx = gid - 284
+			r.tex = _get_tex("res://assets/flare/tilesets/dungeon_stairs.png")
+			r.region = Rect2((idx % 4) * 768, int(idx / 4) * 768, 768, 768)
+			r.oy = -768 + 144; r.type = "tall"
+		elif gid >= 282:
+			var idx = gid - 282
+			r.tex = _get_tex("res://assets/flare/tilesets/dungeon_door_right.png")
+			r.region = Rect2((idx % 2) * 192, int(idx / 2) * 384, 192, 384)
+			r.ox = 48; r.oy = -24; r.type = "tall"
+		elif gid >= 280:
+			var idx = gid - 280
+			r.tex = _get_tex("res://assets/flare/tilesets/dungeon_door_left.png")
+			r.region = Rect2((idx % 2) * 192, int(idx / 2) * 384, 192, 384)
+			r.ox = -48; r.oy = -24; r.type = "tall"
+		elif gid >= 264:
+			var idx = gid - 264
+			r.tex = _get_tex("res://assets/flare/tilesets/dungeon_2x2.png")
+			r.region = Rect2((idx % 4) * 384, int(idx / 4) * 192, 384, 192)
+			r.oy = 48; r.type = "ground"
+		elif gid >= 16:
+			var idx = gid - 16
+			r.tex = _get_tex("res://assets/flare/tilesets/dungeon.png")
+			r.region = Rect2((idx % 16) * 192, int(idx / 16) * 384, 192, 384)
+			r.type = "ground"
+
 	else:
 		# Grassland
 		if gid >= 296:
@@ -241,6 +269,10 @@ func _build_world() -> void:
 
 	var default_grass_tex := _get_tex("res://assets/flare/tilesets/grassland.png")
 	var default_grass_rect := Rect2(0, 0, 192, 384)
+	
+	if _tileset_type == "dungeon":
+		default_grass_tex = _get_tex("res://assets/flare/tilesets/dungeon.png")
+		default_grass_rect = Rect2(0, 0, 192, 384)  # Stone floor tile
 
 	for y in h:
 		var bg_row = data.background[y]
@@ -472,6 +504,64 @@ func _build_enemies() -> void:
 			_spawn("werewolf_a",_iso(50,40)); _spawn("werewolf_a",_iso(55,45))
 			_spawn("orc_b",_iso(100,50)); _spawn("orc_b",_iso(20,100))
 			_spawn("minotaur",_iso(66,50))
+
+		# === DUNGEONS ===
+		"fort_nasu":
+			_spawn("skeleton",_iso(30,30)); _spawn("skeleton",_iso(35,28)); _spawn("skeleton",_iso(28,35))
+			_spawn("skeleton_a",_iso(40,40)); _spawn("skeleton_a",_iso(45,45))
+			_spawn("lich",_iso(50,50)); _spawn("lich",_iso(60,60))
+			_spawn("mage",_iso(70,30)); _spawn("mage",_iso(30,70))
+			_spawn("dragon_b",_iso(50,80))
+			_spawn("minotaur",_iso(80,50))
+
+		"fort_amir":
+			_spawn("orc",_iso(20,25)); _spawn("orc",_iso(25,20)); _spawn("orc",_iso(22,30))
+			_spawn("orc_b",_iso(35,35))
+			_spawn("mage",_iso(50,30)); _spawn("mage",_iso(55,35))
+			_spawn("dragon",_iso(60,40))
+			_spawn("minotaur",_iso(40,60))
+
+		"dilapidated_sewers":
+			_spawn("zombie",_iso(20,20)); _spawn("zombie",_iso(25,25)); _spawn("zombie",_iso(18,28))
+			_spawn("zombie",_iso(30,20)); _spawn("zombie",_iso(22,30))
+			_spawn("lich",_iso(50,40))
+			_spawn("werewolf",_iso(40,50)); _spawn("werewolf_a",_iso(60,30))
+			_spawn("dragon_b",_iso(70,50))
+
+		"stormrock_ruins":
+			_spawn("skeleton_a",_iso(30,35)); _spawn("skeleton_a",_iso(35,30))
+			_spawn("lich",_iso(50,40)); _spawn("lich",_iso(55,50))
+			_spawn("dragon",_iso(40,60)); _spawn("dragon",_iso(70,40))
+			_spawn("minotaur",_iso(25,70))
+			_spawn("werewolf_a",_iso(70,60))
+
+		"st_maria_1":
+			_spawn("skeleton",_iso(20,20)); _spawn("skeleton",_iso(25,18))
+			_spawn("zombie",_iso(30,25)); _spawn("zombie",_iso(28,30))
+			_spawn("mage",_iso(40,35))
+			_spawn("lich",_iso(50,20))
+			_spawn("dragon_b",_iso(25,50))
+
+		"st_maria_2":
+			_spawn("orc",_iso(20,25)); _spawn("orc",_iso(25,20))
+			_spawn("werewolf",_iso(35,30)); _spawn("werewolf",_iso(30,35))
+			_spawn("liche",_iso(45,40))
+			_spawn("dragon",_iso(55,20))
+			_spawn("minotaur",_iso(45,55))
+
+		"st_maria_3":
+			_spawn("skeleton",_iso(10,15)); _spawn("zombie",_iso(15,20))
+			_spawn("lich",_iso(20,25))
+			_spawn("minotaur",_iso(15,35))
+			_spawn("dragon",_iso(30,15))
+
+		"book_of_the_dead":
+			_spawn("skeleton",_iso(10,15)); _spawn("skeleton",_iso(15,12))
+			_spawn("mage",_iso(20,20)); _spawn("mage",_iso(18,25))
+			_spawn("lich",_iso(25,20))
+
+		# Connect some grassland portals to dungeons
+		# Already handled via MapRegistry
 
 
 func _spawn(type: String, pos: Vector2) -> void:

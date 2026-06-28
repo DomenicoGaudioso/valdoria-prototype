@@ -160,6 +160,103 @@ const ALL_MAPS: Array[Dictionary] = [
 			{"target": "grot_lagoon", "pos": Vector2(15, 120), "label": "[NEVE] Grot Lagoon"},
 		],
 	},
+	# === DUNGEON (Sotterranei / Fortezze / Fogne) ===
+	{
+		"id": "fort_nasu",
+		"tileset": "dungeon",
+		"title": "Fort Nasu",
+		"desc": "Fortezza sotterranea. Scheletri e lich infestano i corridoi.",
+		"data": preload("res://data/maps/fort_nasu_data.gd"),
+		"hero_spawn": Vector2(50, 50),
+		"portals": [
+			{"target": "fort_amir", "pos": Vector2(15, 90), "label": "[DUNGEON] Fort Amir"},
+			{"target": "stormrock_ruins", "pos": Vector2(90, 15), "label": "[DUNGEON] Stormrock"},
+			{"target": "black_oak_city", "pos": Vector2(50, 90), "label": "Black Oak City"},
+		],
+	},
+	{
+		"id": "fort_amir",
+		"tileset": "dungeon",
+		"title": "Fort Amir",
+		"desc": "Antica fortezza. Minotauri e draghi delle profondit\u00e0.",
+		"data": preload("res://data/maps/fort_amir_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "fort_nasu", "pos": Vector2(15, 70), "label": "[DUNGEON] Fort Nasu"},
+			{"target": "dilapidated_sewers", "pos": Vector2(70, 15), "label": "[DUNGEON] Fogne"},
+		],
+	},
+	{
+		"id": "dilapidated_sewers",
+		"tileset": "dungeon",
+		"title": "Dilapidated Sewers",
+		"desc": "Fogne in rovina. Zombie e melma tossica ovunque.",
+		"data": preload("res://data/maps/dilapidated_sewers_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "fort_amir", "pos": Vector2(15, 70), "label": "[DUNGEON] Fort Amir"},
+			{"target": "stormrock_ruins", "pos": Vector2(70, 15), "label": "[DUNGEON] Stormrock"},
+		],
+	},
+	{
+		"id": "stormrock_ruins",
+		"tileset": "dungeon",
+		"title": "Stormrock Ruins",
+		"desc": "Rovine maledette. Draghi antichi e lich supremi.",
+		"data": preload("res://data/maps/stormrock_ruins_data.gd"),
+		"hero_spawn": Vector2(50, 50),
+		"portals": [
+			{"target": "fort_nasu", "pos": Vector2(15, 90), "label": "[DUNGEON] Fort Nasu"},
+			{"target": "dilapidated_sewers", "pos": Vector2(90, 15), "label": "[DUNGEON] Fogne"},
+			{"target": "st_maria_1", "pos": Vector2(50, 90), "label": "[DUNGEON] St. Maria"},
+		],
+	},
+	{
+		"id": "st_maria_1",
+		"tileset": "dungeon",
+		"title": "St. Maria I",
+		"desc": "Cripta sacra profanata. Non-morti e maghi oscuri.",
+		"data": preload("res://data/maps/st_maria_1_data.gd"),
+		"hero_spawn": Vector2(35, 35),
+		"portals": [
+			{"target": "stormrock_ruins", "pos": Vector2(15, 60), "label": "[DUNGEON] Stormrock"},
+			{"target": "st_maria_2", "pos": Vector2(60, 15), "label": "[DUNGEON] St. Maria II"},
+		],
+	},
+	{
+		"id": "st_maria_2",
+		"tileset": "dungeon",
+		"title": "St. Maria II",
+		"desc": "Secondo livello. Orchi e licantropi.",
+		"data": preload("res://data/maps/st_maria_2_data.gd"),
+		"hero_spawn": Vector2(35, 35),
+		"portals": [
+			{"target": "st_maria_1", "pos": Vector2(15, 60), "label": "[DUNGEON] St. Maria I"},
+			{"target": "st_maria_3", "pos": Vector2(60, 15), "label": "[DUNGEON] St. Maria III"},
+		],
+	},
+	{
+		"id": "st_maria_3",
+		"tileset": "dungeon",
+		"title": "St. Maria III",
+		"desc": "Il cuore della cripta. Il boss finale ti attende.",
+		"data": preload("res://data/maps/st_maria_3_data.gd"),
+		"hero_spawn": Vector2(20, 30),
+		"portals": [
+			{"target": "st_maria_2", "pos": Vector2(15, 50), "label": "[DUNGEON] St. Maria II"},
+		],
+	},
+	{
+		"id": "book_of_the_dead",
+		"tileset": "dungeon",
+		"title": "Book of the Dead",
+		"desc": "La biblioteca proibita. Conoscenze che uccidono.",
+		"data": preload("res://data/maps/book_of_the_dead_data.gd"),
+		"hero_spawn": Vector2(16, 25),
+		"portals": [
+			{"target": "stormrock_ruins", "pos": Vector2(15, 40), "label": "[DUNGEON] Stormrock"},
+		],
+	},
 ]
 
 
