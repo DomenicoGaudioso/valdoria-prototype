@@ -10,6 +10,11 @@ signal leveled_up(level: int)
 signal gold_changed(gold: int)
 signal equipment_changed(slot: String, item)
 signal speech_requested(speaker: Node2D, text: String, tone_color: Color)
+signal dash_performed
+signal perfect_dodge
+signal skill_used(skill_id: String)
+signal dash_status_changed(ready: bool, cooldown_left: float, cooldown: float)
+signal skill_status_changed(skill_id: String, ready: bool, cooldown_left: float, cooldown: float)
 
 @export var max_hp: int = 100
 @export var current_hp: int = 100
@@ -22,6 +27,12 @@ signal speech_requested(speaker: Node2D, text: String, tone_color: Color)
 @export var ranged_damage_multiplier: float = 0.72
 @export var projectile_speed: float = 720.0
 @export var projectile_hit_radius: float = 22.0
+@export var dash_cooldown: float = 2.4
+@export var dash_duration: float = 0.18
+@export var dash_speed_multiplier: float = 3.2
+@export var dash_iframe_duration: float = 0.30
+@export var guardian_shield_duration: float = 3.0
+@export var guardian_shield_reduction: float = 0.55
 
 # Leveling system
 var level: int = 1
@@ -75,9 +86,27 @@ var _anim_frame: int = 0
 var _anim_timer: float = 0.0
 var _dash_velocity: Vector2 = Vector2.ZERO
 var _dash_timer: float = 0.0
+var _evade_direction: Vector2 = Vector2.DOWN
+var _evade_timer: float = 0.0
+var _dash_cooldown_timer: float = 0.0
+var _invulnerable_timer: float = 0.0
+var _guardian_shield_timer: float = 0.0
 var _speech_cooldown: float = 0.0
 var _equipment_visuals: Node2D = null
 var _outfit_base_tint: Color = Color.WHITE
+var _skill_timers: Dictionary = {
+	"charged_shot": 0.0,
+	"piercing_shot": 0.0,
+	"arcane_burst": 0.0,
+	"guardian_aegis": 0.0,
+}
+
+const SKILL_COOLDOWNS: Dictionary = {
+	"charged_shot": 4.2,
+	"piercing_shot": 5.8,
+	"arcane_burst": 7.5,
+	"guardian_aegis": 10.0,
+}
 
 enum AnimState { IDLE, RUN, ATTACK, HIT, DIE }
 
@@ -111,6 +140,7 @@ func _ready() -> void:
 	_recalc_equip_stats()
 	_update_equipment_visuals()
 	_sync_sprite_glow()
+	_emit_combat_status()
 
 
 func _physics_process(delta: float) -> void:
@@ -120,10 +150,19 @@ func _physics_process(delta: float) -> void:
 	_attack_timer = max(0.0, _attack_timer - delta)
 	_combo_window = max(0.0, _combo_window - delta)
 	_dash_timer = max(0.0, _dash_timer - delta)
+	_evade_timer = max(0.0, _evade_timer - delta)
+	_dash_cooldown_timer = max(0.0, _dash_cooldown_timer - delta)
+	_invulnerable_timer = max(0.0, _invulnerable_timer - delta)
+	_guardian_shield_timer = max(0.0, _guardian_shield_timer - delta)
+	for skill_id in _skill_timers.keys():
+		_skill_timers[skill_id] = max(0.0, float(_skill_timers[skill_id]) - delta)
 	_speech_cooldown = max(0.0, _speech_cooldown - delta)
+	_emit_combat_status()
 
 	# Movement
-	if _anim_state == AnimState.ATTACK:
+	if _evade_timer > 0.0:
+		velocity = _evade_direction * move_speed * dash_speed_multiplier
+	elif _anim_state == AnimState.ATTACK:
 		if _dash_timer > 0.0:
 			var attack_speed: float = move_speed * (1.15 + float(_combo_level) * 0.22)
 			velocity = _dash_velocity * attack_speed
@@ -280,9 +319,122 @@ func _on_attack_command(_target: Node2D) -> void:
 		_try_speak(["Taglio netto.", "Ora cedi.", "Resta giu."], 0.45)
 
 
+func _on_dash_command() -> void:
+	if _is_dead or _dash_cooldown_timer > 0.0:
+		return
+	var direction := _last_direction.normalized()
+	if velocity.length_squared() > 0.01:
+		direction = velocity.normalized()
+	if direction.length_squared() < 0.01:
+		direction = Vector2.DOWN
+
+	_evade_direction = direction
+	_last_direction = direction
+	_evade_timer = dash_duration
+	_invulnerable_timer = dash_iframe_duration + get_effect_value("dodge_window")
+	_dash_cooldown_timer = _scaled_cooldown(dash_cooldown)
+	_anim_state = AnimState.RUN
+	_spawn_dash_afterimage(Color(0.26, 0.86, 1.0, 0.34))
+	_spawn_status_label("PASSO D'OMBRA", Color(0.38, 0.92, 1.0))
+	_play_audio_cue("dash")
+	dash_performed.emit()
+	_emit_combat_status()
+
+
+func _on_skill_command(skill_id: String) -> void:
+	if _is_dead or not SKILL_COOLDOWNS.has(skill_id):
+		return
+	if float(_skill_timers.get(skill_id, 0.0)) > 0.0:
+		return
+	match skill_id:
+		"charged_shot":
+			_use_charged_shot()
+		"piercing_shot":
+			_use_piercing_shot()
+		"arcane_burst":
+			_use_arcane_burst()
+		"guardian_aegis":
+			_use_guardian_aegis()
+		_:
+			return
+	_skill_timers[skill_id] = _scaled_cooldown(float(SKILL_COOLDOWNS[skill_id]))
+	_play_audio_cue("skill")
+	skill_used.emit(skill_id)
+	_emit_combat_status()
+
+
+func _use_charged_shot() -> void:
+	var target := _find_closest_enemy(ranged_attack_range + 180.0)
+	var direction := _last_direction.normalized()
+	if target:
+		direction = (target.global_position - global_position).normalized()
+	if direction.length_squared() < 0.01:
+		direction = Vector2.DOWN
+	_last_direction = direction
+	_spawn_ranged_cast_flash(direction, 3)
+	_spawn_ranged_projectile(
+		direction,
+		target,
+		3,
+		maxi(1, int(round(float(attack_damage) * 2.15))),
+		0,
+		ranged_attack_range + 180.0,
+		1.28,
+		Color(1.0, 0.70, 0.24, 0.88)
+	)
+	_try_speak(["Carica piena.", "Colpo al cuore."], 0.90)
+
+
+func _use_piercing_shot() -> void:
+	var target := _find_closest_enemy(ranged_attack_range + 240.0)
+	var direction := _last_direction.normalized()
+	if target:
+		direction = (target.global_position - global_position).normalized()
+	if direction.length_squared() < 0.01:
+		direction = Vector2.DOWN
+	_last_direction = direction
+	_spawn_ranged_cast_flash(direction, 2)
+	_spawn_ranged_projectile(
+		direction,
+		target,
+		2,
+		maxi(1, int(round(float(attack_damage) * 1.08))),
+		3,
+		ranged_attack_range + 240.0,
+		0.88,
+		Color(0.70, 0.42, 1.0, 0.86)
+	)
+	_try_speak(["Attraversa.", "Linea pulita."], 0.82)
+
+
+func _use_arcane_burst() -> void:
+	var radius := 178.0
+	var damage := maxi(1, int(round(float(attack_damage) * 1.32)))
+	_deal_area_damage(global_position, radius, damage)
+	_spawn_ability_burst(global_position, radius, Color(0.24, 1.0, 0.74, 0.72))
+	_try_speak(["Via da me.", "Cerchio aperto."], 0.88)
+
+
+func _use_guardian_aegis() -> void:
+	_guardian_shield_timer = guardian_shield_duration
+	_invulnerable_timer = maxf(_invulnerable_timer, 0.12)
+	heal(maxi(1, int(round(float(max_hp) * 0.12))))
+	_spawn_guardian_aegis()
+	_try_speak(["Scudo alto.", "Non passo."], 0.92)
+
+
 func take_damage(amount: int, _source: Node2D = null) -> void:
 	if _is_dead:
 		return
+	if _invulnerable_timer > 0.0:
+		_spawn_status_label("SCHIVATA", Color(0.40, 0.95, 1.0))
+		_spawn_dash_afterimage(Color(0.34, 0.90, 1.0, 0.32))
+		_play_audio_cue("dodge")
+		perfect_dodge.emit()
+		return
+	if _guardian_shield_timer > 0.0:
+		amount = maxi(1, int(round(float(amount) * (1.0 - guardian_shield_reduction))))
+		_spawn_status_label("SCUDO", Color(1.0, 0.78, 0.26))
 	var mitigated_amount := _apply_defense(amount)
 	current_hp = max(0, current_hp - mitigated_amount)
 	health_changed.emit(current_hp, max_hp)
@@ -485,6 +637,36 @@ func get_effect_value(effect_id: String) -> float:
 	return float(_effect_mods.get(effect_id, 0.0))
 
 
+func _scaled_cooldown(base_cooldown: float) -> float:
+	var reduction := clampf(get_effect_value("cooldown_redux"), 0.0, 0.65)
+	return maxf(0.25, base_cooldown * (1.0 - reduction))
+
+
+func _emit_combat_status() -> void:
+	dash_status_changed.emit(_dash_cooldown_timer <= 0.0, _dash_cooldown_timer, _scaled_cooldown(dash_cooldown))
+	for skill_id in SKILL_COOLDOWNS.keys():
+		var cooldown := _scaled_cooldown(float(SKILL_COOLDOWNS[skill_id]))
+		var left := float(_skill_timers.get(skill_id, 0.0))
+		skill_status_changed.emit(skill_id, left <= 0.0, left, cooldown)
+
+
+func _resolve_attack_damage(base_amount: int) -> int:
+	var final_amount := maxi(1, base_amount)
+	if has_effect("berserker") and current_hp <= int(float(max_hp) * 0.50):
+		final_amount += int(round(float(base_amount) * get_effect_value("berserker")))
+	if has_effect("void_touch") and randf() < get_effect_value("void_touch"):
+		final_amount += maxi(1, int(round(float(base_amount) * 0.36)))
+		_spawn_status_label("VUOTO", Color(0.40, 0.95, 1.0))
+	return final_amount
+
+
+func _apply_on_hit_effects(damage_done: int) -> void:
+	if has_effect("life_steal"):
+		var amount := int(round(float(damage_done) * get_effect_value("life_steal")))
+		if amount > 0:
+			heal(amount)
+
+
 func _apply_defense(amount: int) -> int:
 	var reduction := int(round(float(amount) * float(defense) / float(defense + 80)))
 	return max(1, amount - reduction)
@@ -546,8 +728,9 @@ func _find_enemy_near_point(point: Vector2, radius: float) -> Node2D:
 func _perform_melee_attack(target: Node2D) -> void:
 	_last_direction = (target.global_position - global_position).normalized()
 	if target.has_method("take_damage"):
-		var dmg := int(attack_damage * _combo_damage_mult[_combo_level])
+		var dmg := _resolve_attack_damage(int(attack_damage * _combo_damage_mult[_combo_level]))
 		target.take_damage(dmg, self)
+		_apply_on_hit_effects(dmg)
 
 	var dash_dir: Vector2 = _last_direction
 	match _combo_level:
@@ -660,7 +843,16 @@ func _spawn_ranged_cast_flash(direction: Vector2, combo_level: int) -> void:
 	tw.tween_callback(flash.queue_free)
 
 
-func _spawn_ranged_projectile(direction: Vector2, target: Node2D, combo_level: int) -> void:
+func _spawn_ranged_projectile(
+	direction: Vector2,
+	target: Node2D,
+	combo_level: int,
+	damage_override: int = -1,
+	pierce_count: int = 0,
+	range_override: float = -1.0,
+	radius_scale: float = 1.0,
+	projectile_color: Color = Color(0.0, 0.0, 0.0, 0.0)
+) -> void:
 	var parent := get_parent()
 	if not parent:
 		return
@@ -677,15 +869,21 @@ func _spawn_ranged_projectile(direction: Vector2, target: Node2D, combo_level: i
 
 	var shape := CollisionShape2D.new()
 	var circle := CircleShape2D.new()
-	circle.radius = projectile_hit_radius
+	circle.radius = projectile_hit_radius * radius_scale
 	shape.shape = circle
 	projectile.add_child(shape)
 
+	var base_trail_color := Color(0.20, 0.84, 1.0, 0.68) if combo_level < 3 else Color(1.0, 0.64, 0.18, 0.74)
+	var base_core_color := Color(0.72, 0.96, 1.0, 0.96) if combo_level < 3 else Color(1.0, 0.88, 0.46, 0.98)
+	if projectile_color.a > 0.0:
+		base_trail_color = projectile_color
+		base_core_color = Color(min(projectile_color.r + 0.22, 1.0), min(projectile_color.g + 0.22, 1.0), min(projectile_color.b + 0.22, 1.0), 0.98)
+
 	var trail := Line2D.new()
 	trail.name = "Trail"
-	trail.width = 7.0
-	trail.default_color = Color(0.20, 0.84, 1.0, 0.68) if combo_level < 3 else Color(1.0, 0.64, 0.18, 0.74)
-	trail.add_point(Vector2(-28.0, 0.0))
+	trail.width = 7.0 * radius_scale
+	trail.default_color = base_trail_color
+	trail.add_point(Vector2(-28.0 - float(pierce_count) * 8.0, 0.0))
 	trail.add_point(Vector2(10.0, 0.0))
 	projectile.add_child(trail)
 
@@ -694,24 +892,33 @@ func _spawn_ranged_projectile(direction: Vector2, target: Node2D, combo_level: i
 	core.polygon = PackedVector2Array([
 		Vector2(18.0, 0.0), Vector2(3.0, -8.0), Vector2(-13.0, 0.0), Vector2(3.0, 8.0),
 	])
-	core.color = Color(0.72, 0.96, 1.0, 0.96) if combo_level < 3 else Color(1.0, 0.88, 0.46, 0.98)
+	core.color = base_core_color
 	projectile.add_child(core)
 
-	var damage: int = maxi(1, int(round(float(attack_damage) * ranged_damage_multiplier * _combo_damage_mult[combo_level])))
-	var hit_done: bool = false
+	var combo_idx := clampi(combo_level, 0, _combo_damage_mult.size() - 1)
+	var damage: int = damage_override if damage_override > 0 else maxi(1, int(round(float(attack_damage) * ranged_damage_multiplier * _combo_damage_mult[combo_idx])))
+	var pierce_state := {"remaining": pierce_count}
+	var hit_bodies: Dictionary = {}
 	projectile.body_entered.connect(func(body: Node) -> void:
-		if hit_done or not _is_valid_enemy(body):
+		if not is_instance_valid(projectile) or not _is_valid_enemy(body):
 			return
-		hit_done = true
+		if hit_bodies.has(body.get_instance_id()):
+			return
+		hit_bodies[body.get_instance_id()] = true
+		var final_damage := _resolve_attack_damage(damage)
 		if body.has_method("take_damage"):
-			body.take_damage(damage, self)
+			body.take_damage(final_damage, self)
+			_apply_on_hit_effects(final_damage)
 		_spawn_projectile_impact(projectile.global_position, combo_level)
-		projectile.queue_free()
+		if int(pierce_state["remaining"]) <= 0:
+			projectile.queue_free()
+		else:
+			pierce_state["remaining"] = int(pierce_state["remaining"]) - 1
 	)
 
-	var travel_distance: float = ranged_attack_range
+	var travel_distance: float = range_override if range_override > 0.0 else ranged_attack_range
 	if target:
-		travel_distance = min(ranged_attack_range, projectile.global_position.distance_to(target.global_position))
+		travel_distance = min(travel_distance, projectile.global_position.distance_to(target.global_position) + 36.0)
 	var end_pos: Vector2 = projectile.global_position + direction * travel_distance
 	var duration: float = maxf(0.12, projectile.global_position.distance_to(end_pos) / maxf(projectile_speed, 1.0))
 	var tw := projectile.create_tween()
@@ -720,10 +927,12 @@ func _spawn_ranged_projectile(direction: Vector2, target: Node2D, combo_level: i
 	tw.tween_callback(func() -> void:
 		if not is_instance_valid(projectile):
 			return
-		if not hit_done:
-			var fallback := _find_enemy_near_point(projectile.global_position, projectile_hit_radius * 1.7)
+		if hit_bodies.is_empty():
+			var fallback := _find_enemy_near_point(projectile.global_position, projectile_hit_radius * radius_scale * 1.7)
 			if fallback and fallback.has_method("take_damage"):
-				fallback.take_damage(damage, self)
+				var final_damage := _resolve_attack_damage(damage)
+				fallback.take_damage(final_damage, self)
+				_apply_on_hit_effects(final_damage)
 			_spawn_projectile_impact(projectile.global_position, combo_level)
 		projectile.queue_free()
 	)
@@ -750,6 +959,113 @@ func _spawn_projectile_impact(position: Vector2, combo_level: int) -> void:
 		tw.tween_property(spark, "scale", Vector2(1.35, 1.35), 0.20).set_trans(Tween.TRANS_SINE)
 		tw.parallel().tween_property(spark, "modulate:a", 0.0, 0.20)
 		tw.tween_callback(spark.queue_free)
+
+
+func _deal_area_damage(center: Vector2, radius: float, damage: int) -> void:
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not _is_valid_enemy(enemy):
+			continue
+		var enemy_node := enemy as Node2D
+		if enemy_node.global_position.distance_to(center) > radius:
+			continue
+		if enemy_node.has_method("take_damage"):
+			var final_damage := _resolve_attack_damage(damage)
+			enemy_node.take_damage(final_damage, self)
+			_apply_on_hit_effects(final_damage)
+
+
+func _spawn_ability_burst(center: Vector2, radius: float, color: Color) -> void:
+	var parent := get_parent()
+	if not parent:
+		return
+	var ring := Line2D.new()
+	ring.name = "ArcaneBurst"
+	ring.closed = true
+	ring.width = 7.0
+	ring.default_color = color
+	ring.global_position = center
+	ring.z_index = 4092
+	for i in range(64):
+		var a := TAU * float(i) / 64.0
+		ring.add_point(Vector2(cos(a) * radius, sin(a) * radius * 0.58))
+	parent.add_child(ring)
+
+	var tw := create_tween()
+	ring.scale = Vector2(0.18, 0.18)
+	tw.tween_property(ring, "scale", Vector2(1.0, 1.0), 0.26).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(ring, "modulate:a", 0.0, 0.38)
+	tw.tween_callback(ring.queue_free)
+
+
+func _spawn_guardian_aegis() -> void:
+	var parent := get_parent()
+	if not parent:
+		return
+	var shield := Line2D.new()
+	shield.name = "GuardianAegis"
+	shield.closed = true
+	shield.width = 4.5
+	shield.default_color = Color(1.0, 0.76, 0.22, 0.72)
+	shield.global_position = global_position + Vector2(0.0, -28.0)
+	shield.z_index = 4091
+	for i in range(52):
+		var a := TAU * float(i) / 52.0
+		shield.add_point(Vector2(cos(a) * 48.0, sin(a) * 66.0))
+	parent.add_child(shield)
+
+	var tw := create_tween()
+	tw.set_loops(6)
+	tw.tween_property(shield, "scale", Vector2(1.12, 1.12), 0.25).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(shield, "scale", Vector2(0.96, 0.96), 0.25).set_trans(Tween.TRANS_SINE)
+	var fade := create_tween()
+	fade.tween_interval(guardian_shield_duration)
+	fade.tween_property(shield, "modulate:a", 0.0, 0.30)
+	fade.tween_callback(shield.queue_free)
+
+
+func _spawn_dash_afterimage(color: Color) -> void:
+	var parent := get_parent()
+	if not parent or not _sprite:
+		return
+	var ghost := Sprite2D.new()
+	ghost.name = "DashAfterimage"
+	ghost.texture = _sprite.texture
+	ghost.region_enabled = _sprite.region_enabled
+	ghost.region_rect = _sprite.region_rect
+	ghost.global_position = global_position + Vector2(0.0, -42.0)
+	ghost.scale = _sprite.scale
+	ghost.rotation = _sprite.rotation
+	ghost.modulate = color
+	ghost.z_index = _sprite.z_index - 1
+	parent.add_child(ghost)
+
+	var tw := create_tween()
+	tw.tween_property(ghost, "global_position", ghost.global_position - _evade_direction * 34.0, 0.22)
+	tw.parallel().tween_property(ghost, "modulate:a", 0.0, 0.22)
+	tw.tween_callback(ghost.queue_free)
+
+
+func _spawn_status_label(text: String, color: Color) -> void:
+	var parent := get_parent()
+	if not parent:
+		return
+	var label := Label.new()
+	label.name = "PlayerStatus"
+	label.text = text
+	label.position = global_position + Vector2(-62.0, -118.0)
+	label.custom_minimum_size = Vector2(124.0, 0.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 13)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.84))
+	label.add_theme_constant_override("outline_size", 4)
+	label.z_index = 4095
+	parent.add_child(label)
+
+	var tw := create_tween()
+	tw.tween_property(label, "position:y", label.position.y - 30.0, 0.72)
+	tw.parallel().tween_property(label, "modulate:a", 0.0, 0.72)
+	tw.tween_callback(label.queue_free)
 
 
 func _ensure_equipment_visuals() -> void:

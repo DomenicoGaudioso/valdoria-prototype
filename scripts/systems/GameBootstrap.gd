@@ -22,6 +22,7 @@ var _hero_line_cooldown: float = 0.0
 var _last_enemy_count: int = 0
 var _osm_cache: Dictionary = {}
 var _autosave_pending: bool = false
+var _system_ui_connected: bool = false
 
 func _ready() -> void:
 	randomize()
@@ -174,6 +175,7 @@ func _load_map(map_id: String) -> void:
 	_build_portals()
 	_build_ui()
 	_connect_input()
+	_register_system_map_change(map_id)
 
 	if has_node("GameUI") and $GameUI.has_method("show_debug_message"):
 		var story_line: String = _story_map_flavor(map_id)
@@ -1817,6 +1819,7 @@ func _build_player() -> void:
 		p.gold_changed.connect(func(_gold: int): _queue_autosave())
 	if p.has_signal("died"):
 		p.died.connect(func(): _queue_autosave())
+	_bind_system_to_player(p)
 
 	_cam = Camera2D.new(); _cam.name = "Camera2D"
 	_cam.enabled = true
@@ -2241,6 +2244,14 @@ func _get_enemy_scale_for_depth(base_tier: int, depth: int) -> float:
 	return 1.0 + float(extra_depth) * 0.18
 
 
+func _default_enemy_attack_style(enemy_type: String) -> String:
+	if enemy_type in ["skeleton_a", "mage", "lich"]:
+		return "ranged"
+	if enemy_type in ["wyvern", "wyvern_a", "dragon", "dragon_b", "myrm_queen"]:
+		return "hybrid"
+	return "melee"
+
+
 func _spawn(type: String, pos: Vector2) -> void:
 	if not _enemy_types.has(type):
 		push_warning("Unknown enemy type: %s" % type)
@@ -2263,6 +2274,16 @@ func _spawn(type: String, pos: Vector2) -> void:
 	e.set("move_speed",c["spd"]); e.set("attack_damage",scaled_damage)
 	e.set("attack_cooldown",c["cd"]); e.set("detection_radius",c["det"]); e.set("attack_range",c["atk"])
 	e.set("xp_value",scaled_xp)
+	var attack_style := _default_enemy_attack_style(type)
+	var is_boss_like := bool(c.get("boss", base_tier >= 4 and scaled_hp >= 140))
+	e.set("attack_style", c.get("style", attack_style))
+	e.set("melee_range", float(c.get("melee", min(float(c["atk"]), 64.0))))
+	e.set("preferred_range", float(c.get("preferred", max(float(c["atk"]) * 0.72, 120.0))))
+	e.set("projectile_speed", float(c.get("projectile_speed", 390.0 + float(base_tier) * 34.0)))
+	e.set("projectile_radius", float(c.get("projectile_radius", 13.0 + float(base_tier))))
+	e.set("telegraph_time", float(c.get("telegraph", 0.48 if is_boss_like else 0.36)))
+	e.set("boss_like", is_boss_like)
+	e.set("phase_count", int(c.get("phases", 3 if is_boss_like else 1)))
 	e.set("_frame_w", int(c.get("fw", 128)))
 	e.set("_frame_h", int(c.get("fh", 128)))
 	e.set("spawn_lines", c.get("spawn_lines", _default_enemy_lines(type, "spawn")))
@@ -2341,6 +2362,8 @@ func _spawn(type: String, pos: Vector2) -> void:
 		e.drop_item.connect(_on_drop.bind(e))
 	if e.has_signal("speech_requested"):
 		e.speech_requested.connect(_show_combat_line)
+	if e.has_signal("phase_changed"):
+		e.phase_changed.connect(_on_enemy_phase_changed)
 
 	# Health bar
 	var hb := ProgressBar.new()
@@ -2476,6 +2499,9 @@ func _add_insectoid_shell(enemy: Node2D, config: Dictionary) -> void:
 func _on_enemy_killed(xp_val: int, enemy_name: String) -> void:
 	if _player_node and _player_node.has_method("gain_xp"):
 		_player_node.gain_xp(xp_val)
+	var system := _get_system_mission()
+	if system and system.has_method("register_kill"):
+		system.register_kill(enemy_name, xp_val, _player_node)
 	_maybe_hero_kill_line(enemy_name)
 	_play_audio_cue("enemy_death")
 	
@@ -2556,6 +2582,229 @@ func _play_audio_cue(cue: String) -> void:
 	var audio := get_node_or_null("/root/ProceduralAudio")
 	if audio and audio.has_method("play_cue"):
 		audio.play_cue(cue)
+
+
+# ===== SYSTEM MISSIONS =====
+
+func _get_system_mission() -> Node:
+	return get_node_or_null("/root/SystemMission")
+
+
+func _bind_system_to_player(player: Node) -> void:
+	var system := _get_system_mission()
+	if not system:
+		return
+	if system.has_method("bind_player"):
+		system.bind_player(player)
+	if player.has_signal("dash_performed") and not player.dash_performed.is_connected(_on_player_dash_performed):
+		player.dash_performed.connect(_on_player_dash_performed)
+	if player.has_signal("perfect_dodge") and not player.perfect_dodge.is_connected(_on_player_perfect_dodge):
+		player.perfect_dodge.connect(_on_player_perfect_dodge)
+	if player.has_signal("skill_used") and not player.skill_used.is_connected(_on_player_skill_used):
+		player.skill_used.connect(_on_player_skill_used)
+
+
+func _connect_system_ui(ui: CanvasLayer) -> void:
+	var system := _get_system_mission()
+	if not system:
+		return
+	if not _system_ui_connected:
+		if system.has_signal("mission_updated"):
+			system.mission_updated.connect(_refresh_system_panel)
+		if system.has_signal("system_message"):
+			system.system_message.connect(_show_system_popup)
+		_system_ui_connected = true
+	_build_system_panel(ui)
+	if system.has_method("get_snapshot"):
+		_refresh_system_panel(system.get_snapshot())
+
+
+func _register_system_map_change(map_id: String) -> void:
+	var system := _get_system_mission()
+	if system and system.has_method("register_map_change"):
+		system.register_map_change(map_id, _player_node)
+
+
+func _on_player_dash_performed() -> void:
+	var system := _get_system_mission()
+	if system and system.has_method("register_dash"):
+		system.register_dash(_player_node)
+
+
+func _on_player_perfect_dodge() -> void:
+	var system := _get_system_mission()
+	if system and system.has_method("register_perfect_dodge"):
+		system.register_perfect_dodge(_player_node)
+
+
+func _on_player_skill_used(skill_id: String) -> void:
+	var system := _get_system_mission()
+	if system and system.has_method("register_skill"):
+		system.register_skill(skill_id, _player_node)
+
+
+func _on_enemy_phase_changed(enemy_name: String, phase_index: int) -> void:
+	var system := _get_system_mission()
+	if system and system.has_method("register_boss_phase"):
+		system.register_boss_phase(enemy_name, phase_index, _player_node)
+
+
+func _on_item_picked_up(item_data) -> void:
+	_play_audio_cue("loot")
+	var system := _get_system_mission()
+	if system and system.has_method("register_loot"):
+		system.register_loot(item_data, _player_node)
+
+
+func _build_system_panel(ui: CanvasLayer) -> void:
+	if ui.get_node_or_null("SystemPanel"):
+		return
+	var panel := Panel.new()
+	panel.name = "SystemPanel"
+	panel.offset_left = 10.0
+	panel.offset_top = 158.0
+	panel.offset_right = 360.0
+	panel.offset_bottom = 304.0
+	panel.add_theme_stylebox_override("panel", _make_panel_style(Color(0.012, 0.022, 0.044, 0.84), Color(0.24, 0.86, 1.0, 0.52), 0.50))
+	ui.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.name = "MarginContainer"
+	margin.name = "SystemMargin"
+	margin.anchor_right = 1.0
+	margin.anchor_bottom = 1.0
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	panel.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.name = "SystemVBox"
+	vbox.add_theme_constant_override("separation", 3)
+	margin.add_child(vbox)
+
+	var header := HBoxContainer.new()
+	header.name = "SystemHeader"
+	vbox.add_child(header)
+
+	var title := Label.new()
+	title.name = "SystemTitle"
+	title.text = "SYSTEM | Rank E"
+	title.add_theme_color_override("font_color", Color(0.44, 0.92, 1.0))
+	title.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.82))
+	title.add_theme_constant_override("outline_size", 3)
+	title.add_theme_font_size_override("font_size", 14)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+
+	var timer := Label.new()
+	timer.name = "SystemTimer"
+	timer.text = "10:00"
+	timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	timer.add_theme_color_override("font_color", Color(1.0, 0.78, 0.30))
+	timer.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.82))
+	timer.add_theme_constant_override("outline_size", 3)
+	timer.add_theme_font_size_override("font_size", 13)
+	timer.custom_minimum_size = Vector2(58, 0)
+	header.add_child(timer)
+
+	var list := VBoxContainer.new()
+	list.name = "SystemMissionList"
+	list.add_theme_constant_override("separation", 2)
+	vbox.add_child(list)
+
+
+func _refresh_system_panel(snapshot: Dictionary) -> void:
+	var ui := get_node_or_null("GameUI") as CanvasLayer
+	if not ui:
+		return
+	var panel := ui.get_node_or_null("SystemPanel")
+	if not panel:
+		return
+	var title := panel.get_node_or_null("SystemMargin/SystemVBox/SystemHeader/SystemTitle") as Label
+	if title:
+		title.text = "SYSTEM | Rank %s" % String(snapshot.get("rank", "E"))
+	var timer := panel.get_node_or_null("SystemMargin/SystemVBox/SystemHeader/SystemTimer") as Label
+	if timer:
+		var seconds := int(ceil(float(snapshot.get("timer", 0.0))))
+		timer.text = "%02d:%02d" % [int(seconds / 60), seconds % 60]
+	var list := panel.get_node_or_null("SystemMargin/SystemVBox/SystemMissionList") as VBoxContainer
+	if not list:
+		return
+	for child in list.get_children():
+		child.queue_free()
+	var missions: Array = snapshot.get("missions", [])
+	var shown := 0
+	for mission in missions:
+		if bool(mission.get("completed", false)) or bool(mission.get("failed", false)):
+			continue
+		var row := Label.new()
+		row.text = "%s  %d/%d" % [
+			String(mission.get("title", "")),
+			int(mission.get("progress", 0)),
+			int(mission.get("target", 1)),
+		]
+		row.add_theme_color_override("font_color", Color(0.72, 0.90, 1.0))
+		row.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.76))
+		row.add_theme_constant_override("outline_size", 2)
+		row.add_theme_font_size_override("font_size", 11)
+		list.add_child(row)
+		shown += 1
+		if shown >= 4:
+			break
+
+
+func _show_system_popup(title: String, body: String, tone: Color) -> void:
+	var ui := get_node_or_null("GameUI") as CanvasLayer
+	if not ui:
+		return
+	var popup := Panel.new()
+	popup.name = "SystemPopup"
+	popup.anchor_left = 0.5
+	popup.anchor_right = 0.5
+	popup.offset_left = -220.0
+	popup.offset_top = 92.0
+	popup.offset_right = 220.0
+	popup.offset_bottom = 172.0
+	popup.modulate.a = 0.0
+	popup.add_theme_stylebox_override("panel", _make_panel_style(Color(0.012, 0.020, 0.042, 0.94), Color(tone.r, tone.g, tone.b, 0.82), 0.66))
+	ui.add_child(popup)
+
+	var box := VBoxContainer.new()
+	box.anchor_right = 1.0
+	box.anchor_bottom = 1.0
+	box.offset_left = 16.0
+	box.offset_top = 10.0
+	box.offset_right = -16.0
+	box.offset_bottom = -10.0
+	box.add_theme_constant_override("separation", 4)
+	popup.add_child(box)
+
+	var ttl := Label.new()
+	ttl.text = title
+	ttl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ttl.add_theme_color_override("font_color", tone)
+	ttl.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.88))
+	ttl.add_theme_constant_override("outline_size", 3)
+	ttl.add_theme_font_size_override("font_size", 15)
+	box.add_child(ttl)
+
+	var msg := Label.new()
+	msg.text = body
+	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	msg.add_theme_color_override("font_color", Color(0.86, 0.94, 1.0))
+	msg.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.78))
+	msg.add_theme_constant_override("outline_size", 2)
+	msg.add_theme_font_size_override("font_size", 11)
+	box.add_child(msg)
+
+	var tw := create_tween()
+	tw.tween_property(popup, "modulate:a", 1.0, 0.16)
+	tw.tween_interval(2.2)
+	tw.tween_property(popup, "modulate:a", 0.0, 0.24)
+	tw.tween_callback(popup.queue_free)
 
 
 # ===== PORTALS (Shadow Rifts) - Eldrath themed =====
@@ -2732,6 +2981,8 @@ func _spawn_dropped_equip(item_data, pos: Vector2) -> void:
 	d.add_child(lb)
 	d.set_script(load("res://scripts/items/DroppedItem.gd"))
 	d.set("item_data", item_data)
+	if d.has_signal("picked_up"):
+		d.picked_up.connect(_on_item_picked_up)
 	
 	var dropped_items := get_node_or_null("DroppedItems")
 	if dropped_items:
@@ -2968,6 +3219,7 @@ func _build_ui() -> void:
 	_style_dark_button(r3d)
 	r3d.pressed.connect(_switch_to_real_world)
 	hbx.add_child(r3d)
+	_build_skill_quickbar(ui)
 
 	# Minimap (top-right corner)
 	var minimap := Control.new(); minimap.name = "Minimap"
@@ -3100,6 +3352,100 @@ func _build_ui() -> void:
 	dbg.anchor_left = 0.0; dbg.anchor_bottom = 1.0
 	dbg.offset_left = 16.0; dbg.offset_bottom = -100.0
 	dbg.modulate = Color.YELLOW; dbg.visible = false; ui.add_child(dbg)
+	_connect_system_ui(ui)
+
+
+func _build_skill_quickbar(ui: CanvasLayer) -> void:
+	var frame := Panel.new()
+	frame.name = "SkillQuickbar"
+	frame.anchor_left = 1.0
+	frame.anchor_top = 1.0
+	frame.anchor_right = 1.0
+	frame.anchor_bottom = 1.0
+	frame.offset_left = -386.0
+	frame.offset_top = -214.0
+	frame.offset_right = -10.0
+	frame.offset_bottom = -158.0
+	frame.add_theme_stylebox_override("panel", _make_panel_style(Color(0.020, 0.026, 0.052, 0.76), Color(0.50, 0.82, 1.0, 0.38), 0.42))
+	ui.add_child(frame)
+
+	var margin := MarginContainer.new()
+	margin.anchor_right = 1.0
+	margin.anchor_bottom = 1.0
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	frame.add_child(margin)
+
+	var row := HBoxContainer.new()
+	row.name = "HBoxContainer"
+	row.add_theme_constant_override("separation", 7)
+	margin.add_child(row)
+
+	var dash := Button.new()
+	dash.name = "DashButton"
+	dash.text = "Shift"
+	dash.custom_minimum_size = Vector2(62, 40)
+	_style_dark_button(dash)
+	dash.pressed.connect(_emit_dash_command)
+	row.add_child(dash)
+
+	var skills := [
+		{"id": "charged_shot", "label": "1"},
+		{"id": "piercing_shot", "label": "2"},
+		{"id": "arcane_burst", "label": "3"},
+		{"id": "guardian_aegis", "label": "4"},
+	]
+	for def in skills:
+		var skill_id := String(def["id"])
+		var btn := Button.new()
+		btn.name = "Skill_%s" % skill_id
+		btn.text = String(def["label"])
+		btn.custom_minimum_size = Vector2(48, 40)
+		_style_dark_button(btn)
+		btn.pressed.connect(_emit_skill_command.bind(skill_id))
+		row.add_child(btn)
+	if _player_node:
+		if _player_node.has_signal("dash_status_changed") and not _player_node.dash_status_changed.is_connected(_on_dash_status_changed):
+			_player_node.dash_status_changed.connect(_on_dash_status_changed)
+		if _player_node.has_signal("skill_status_changed") and not _player_node.skill_status_changed.is_connected(_on_skill_status_changed):
+			_player_node.skill_status_changed.connect(_on_skill_status_changed)
+
+
+func _emit_dash_command() -> void:
+	var ic := get_node_or_null("/root/InputController")
+	if ic and ic.has_signal("dash_command"):
+		ic.dash_command.emit()
+
+
+func _emit_skill_command(skill_id: String) -> void:
+	var ic := get_node_or_null("/root/InputController")
+	if ic and ic.has_signal("skill_command"):
+		ic.skill_command.emit(skill_id)
+
+
+func _on_dash_status_changed(ready: bool, cooldown_left: float, _cooldown: float) -> void:
+	var ui := get_node_or_null("GameUI") as CanvasLayer
+	if not ui:
+		return
+	var button := ui.get_node_or_null("SkillQuickbar/MarginContainer/HBoxContainer/DashButton") as Button
+	if not button:
+		return
+	button.disabled = not ready
+	button.text = "Shift" if ready else "%.1f" % cooldown_left
+
+
+func _on_skill_status_changed(skill_id: String, ready: bool, cooldown_left: float, _cooldown: float) -> void:
+	var ui := get_node_or_null("GameUI") as CanvasLayer
+	if not ui:
+		return
+	var button := ui.get_node_or_null("SkillQuickbar/MarginContainer/HBoxContainer/Skill_%s" % skill_id) as Button
+	if not button:
+		return
+	var labels := {"charged_shot": "1", "piercing_shot": "2", "arcane_burst": "3", "guardian_aegis": "4"}
+	button.disabled = not ready
+	button.text = String(labels.get(skill_id, "?")) if ready else "%.1f" % cooldown_left
 
 
 func _refresh_inventory_ui(ui: CanvasLayer) -> void:
@@ -3263,6 +3609,14 @@ func _connect_input() -> void:
 			if ic.attack_command.is_connected(_player_node._on_attack_command):
 				ic.attack_command.disconnect(_player_node._on_attack_command)
 			ic.attack_command.connect(_player_node._on_attack_command)
+		if _player_node and _player_node.has_method("_on_dash_command") and ic.has_signal("dash_command"):
+			if ic.dash_command.is_connected(_player_node._on_dash_command):
+				ic.dash_command.disconnect(_player_node._on_dash_command)
+			ic.dash_command.connect(_player_node._on_dash_command)
+		if _player_node and _player_node.has_method("_on_skill_command") and ic.has_signal("skill_command"):
+			if ic.skill_command.is_connected(_player_node._on_skill_command):
+				ic.skill_command.disconnect(_player_node._on_skill_command)
+			ic.skill_command.connect(_player_node._on_skill_command)
 
 		if has_node("GameUI") and $GameUI.has_method("_toggle_inventory"):
 			if ic.toggle_inventory.is_connected($GameUI._toggle_inventory):
@@ -3291,6 +3645,12 @@ func _ensure_mobile_controls() -> CanvasLayer:
 	if ic and mc.has_signal("mobile_attack"):
 		if not mc.mobile_attack.is_connected(ic._on_mobile_attack):
 			mc.mobile_attack.connect(ic._on_mobile_attack)
+	if ic and mc.has_signal("mobile_dash"):
+		if not mc.mobile_dash.is_connected(ic._on_mobile_dash):
+			mc.mobile_dash.connect(ic._on_mobile_dash)
+	if ic and mc.has_signal("mobile_skill"):
+		if not mc.mobile_skill.is_connected(ic._on_mobile_skill):
+			mc.mobile_skill.connect(ic._on_mobile_skill)
 	if ic and mc.has_signal("mobile_inventory"):
 		if not mc.mobile_inventory.is_connected(ic._on_mobile_inventory):
 			mc.mobile_inventory.connect(ic._on_mobile_inventory)

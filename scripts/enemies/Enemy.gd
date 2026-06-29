@@ -7,6 +7,7 @@ signal enemy_died(enemy: Node2D)
 signal drop_item(item_data)
 signal enemy_killed(xp_value: int, enemy_name: String)
 signal speech_requested(speaker: Node2D, text: String, tone_color: Color)
+signal phase_changed(enemy_name: String, phase_index: int)
 
 enum State { IDLE, CHASE, ATTACK, DEAD }
 
@@ -22,6 +23,14 @@ enum State { IDLE, CHASE, ATTACK, DEAD }
 @export var attack_cooldown: float = 1.2
 @export var stop_distance: float = 5.0
 @export var xp_value: int = 10
+@export var attack_style: String = "melee"
+@export var melee_range: float = 54.0
+@export var preferred_range: float = 170.0
+@export var projectile_speed: float = 430.0
+@export var projectile_radius: float = 15.0
+@export var telegraph_time: float = 0.42
+@export var boss_like: bool = false
+@export var phase_count: int = 1
 
 @export var loot_table: Array[Dictionary] = []
 @export var spawn_lines: Array[String] = []
@@ -38,6 +47,14 @@ var _anim_timer: float = 0.0
 var _flash_timer: float = 0.0
 var _dash_timer: float = 0.0
 var _dash_velocity: Vector2 = Vector2.ZERO
+var _telegraph_timer: float = 0.0
+var _telegraph_kind: String = ""
+var _telegraph_direction: Vector2 = Vector2.ZERO
+var _telegraph_target_pos: Vector2 = Vector2.ZERO
+var _phase_index: int = 0
+var _base_move_speed: float = 0.0
+var _base_attack_damage: int = 0
+var _base_attack_cooldown: float = 1.0
 var _walk_cycle: float = 0.0
 var _death_timer: float = 0.0
 var _last_move_dir: Vector2 = Vector2.DOWN
@@ -67,6 +84,11 @@ var _frame_rates := {}
 func _ready() -> void:
 	add_to_group("enemies")
 	current_hp = max_hp
+	_base_move_speed = move_speed
+	_base_attack_damage = attack_damage
+	_base_attack_cooldown = attack_cooldown
+	if melee_range <= 0.0:
+		melee_range = min(attack_range, 58.0)
 	if _sprite:
 		_base_sprite_position = _sprite.position
 		_base_modulate = _sprite.modulate
@@ -98,6 +120,10 @@ func _physics_process(delta: float) -> void:
 	_attack_timer = max(0.0, _attack_timer - delta)
 	_flash_timer = max(0.0, _flash_timer - delta)
 	_dash_timer = max(0.0, _dash_timer - delta)
+	if _telegraph_timer > 0.0:
+		_telegraph_timer = max(0.0, _telegraph_timer - delta)
+		if _telegraph_timer <= 0.0:
+			_execute_telegraphed_attack()
 	_speech_cooldown = max(0.0, _speech_cooldown - delta)
 	if velocity.length_squared() > 4.0:
 		_walk_cycle += delta * 9.0
@@ -126,6 +152,8 @@ func _physics_process(delta: float) -> void:
 	
 	if _dash_timer > 0.0:
 		velocity = _dash_velocity * move_speed * 2.5
+	if _telegraph_timer > 0.0:
+		velocity = Vector2.ZERO
 
 	move_and_slide()
 	_update_sprite(delta)
@@ -138,6 +166,9 @@ func _chase_player(_delta: float) -> void:
 	if dist <= attack_range:
 		_set_state(State.ATTACK)
 		return
+	if attack_style in ["ranged", "hybrid"] and dist < preferred_range * 0.62:
+		velocity = (global_position - _player.global_position).normalized() * move_speed * 0.72
+		return
 	if dist > stop_distance:
 		velocity = (_player.global_position - global_position).normalized() * move_speed
 	else:
@@ -145,7 +176,7 @@ func _chase_player(_delta: float) -> void:
 
 
 func _try_attack() -> void:
-	if _attack_timer > 0.0 or _player == null: return
+	if _attack_timer > 0.0 or _player == null or _telegraph_timer > 0.0: return
 	var dist := global_position.distance_to(_player.global_position)
 	if dist > attack_range:
 		_set_state(State.CHASE)
@@ -156,14 +187,173 @@ func _try_attack() -> void:
 	_anim_frame = _attack_range[0]
 	_anim_timer = 0.0
 	_say(attack_lines, 0.55)
-	_play_audio_cue("enemy_attack")
-
 	var dir := (_player.global_position - global_position).normalized()
-	_dash_velocity = dir
-	_dash_timer = 0.1
+	var kind := "melee"
+	if attack_style == "ranged":
+		kind = "ranged"
+	elif attack_style == "hybrid" and dist > melee_range:
+		kind = "ranged"
+	_start_attack_telegraph(kind, dir)
 
+
+func _start_attack_telegraph(kind: String, direction: Vector2) -> void:
+	if direction.length_squared() < 0.01:
+		direction = Vector2.DOWN
+	_telegraph_kind = kind
+	_telegraph_direction = direction
+	_telegraph_target_pos = _player.global_position if _player else global_position + direction * attack_range
+	_telegraph_timer = maxf(0.08, telegraph_time * (0.82 if _phase_index >= 2 else 1.0))
+	_play_audio_cue("enemy_telegraph")
+	if kind == "ranged":
+		_spawn_ranged_telegraph(direction)
+	else:
+		_spawn_melee_telegraph(direction)
+
+
+func _execute_telegraphed_attack() -> void:
+	if _state == State.DEAD or not _player or (_player.has_method("is_dead") and _player.is_dead()):
+		return
+	_play_audio_cue("enemy_attack")
+	if _telegraph_kind == "ranged":
+		_spawn_enemy_projectile(_telegraph_direction)
+		return
+
+	var dist := global_position.distance_to(_player.global_position)
+	if dist > melee_range + 18.0:
+		return
+	_dash_velocity = _telegraph_direction
+	_dash_timer = 0.1
 	if _player.has_method("take_damage"):
 		_player.take_damage(attack_damage, self)
+
+
+func _spawn_ranged_telegraph(direction: Vector2) -> void:
+	var parent := get_parent()
+	if not parent:
+		return
+	var line := Line2D.new()
+	line.name = "EnemyRangedTelegraph"
+	line.global_position = global_position
+	line.rotation = direction.angle()
+	line.width = 4.0 if not boss_like else 7.0
+	line.default_color = Color(1.0, 0.26, 0.20, 0.62) if not boss_like else Color(1.0, 0.56, 0.16, 0.78)
+	line.z_index = 4089
+	line.add_point(Vector2(22.0, 0.0))
+	line.add_point(Vector2(attack_range, 0.0))
+	parent.add_child(line)
+
+	var tw := create_tween()
+	tw.tween_property(line, "width", line.width * 1.65, _telegraph_timer)
+	tw.parallel().tween_property(line, "modulate:a", 0.0, _telegraph_timer)
+	tw.tween_callback(line.queue_free)
+
+
+func _spawn_melee_telegraph(direction: Vector2) -> void:
+	var parent := get_parent()
+	if not parent:
+		return
+	var ring := Line2D.new()
+	ring.name = "EnemyMeleeTelegraph"
+	ring.closed = true
+	ring.width = 3.0 if not boss_like else 5.0
+	ring.default_color = Color(1.0, 0.18, 0.12, 0.62) if not boss_like else Color(1.0, 0.62, 0.16, 0.76)
+	ring.global_position = global_position + direction * (melee_range * 0.45)
+	ring.z_index = 4089
+	var radius := melee_range * (0.72 if not boss_like else 1.05)
+	for i in range(42):
+		var a := TAU * float(i) / 42.0
+		ring.add_point(Vector2(cos(a) * radius, sin(a) * radius * 0.58))
+	parent.add_child(ring)
+
+	var tw := create_tween()
+	ring.scale = Vector2(0.45, 0.45)
+	tw.tween_property(ring, "scale", Vector2(1.0, 1.0), _telegraph_timer)
+	tw.parallel().tween_property(ring, "modulate:a", 0.0, _telegraph_timer)
+	tw.tween_callback(ring.queue_free)
+
+
+func _spawn_enemy_projectile(direction: Vector2) -> void:
+	var parent := get_parent()
+	if not parent:
+		return
+	if direction.length_squared() < 0.01:
+		direction = Vector2.DOWN
+	var projectile := Area2D.new()
+	projectile.name = "EnemyProjectile"
+	projectile.collision_layer = 0
+	projectile.collision_mask = 2
+	projectile.monitorable = false
+	projectile.monitoring = true
+	projectile.global_position = global_position + direction * 34.0
+	projectile.rotation = direction.angle()
+	projectile.z_index = 4090
+	parent.add_child(projectile)
+
+	var col := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = projectile_radius * (1.25 if boss_like else 1.0)
+	col.shape = circle
+	projectile.add_child(col)
+
+	var trail := Line2D.new()
+	trail.name = "EnemyProjectileTrail"
+	trail.width = 6.0 if not boss_like else 9.0
+	trail.default_color = Color(1.0, 0.24, 0.18, 0.70) if not boss_like else Color(1.0, 0.58, 0.14, 0.78)
+	trail.add_point(Vector2(-24.0, 0.0))
+	trail.add_point(Vector2(10.0, 0.0))
+	projectile.add_child(trail)
+
+	var core := Polygon2D.new()
+	core.name = "EnemyProjectileCore"
+	core.polygon = PackedVector2Array([
+		Vector2(16.0, 0.0), Vector2(1.0, -7.0), Vector2(-12.0, 0.0), Vector2(1.0, 7.0),
+	])
+	core.color = Color(1.0, 0.74, 0.36, 0.96) if boss_like else Color(1.0, 0.42, 0.32, 0.94)
+	projectile.add_child(core)
+
+	var hit_done := {"value": false}
+	projectile.body_entered.connect(func(body: Node) -> void:
+		if bool(hit_done["value"]) or not body.is_in_group("player"):
+			return
+		hit_done["value"] = true
+		if body.has_method("take_damage"):
+			body.take_damage(attack_damage, self)
+		_spawn_projectile_impact(projectile.global_position)
+		projectile.queue_free()
+	)
+
+	var travel := attack_range + 44.0
+	var end_pos := projectile.global_position + direction * travel
+	var duration := maxf(0.12, travel / maxf(projectile_speed, 1.0))
+	var tw := projectile.create_tween()
+	tw.tween_property(projectile, "global_position", end_pos, duration)
+	tw.tween_callback(func() -> void:
+		if not is_instance_valid(projectile):
+			return
+		_spawn_projectile_impact(projectile.global_position)
+		projectile.queue_free()
+	)
+
+
+func _spawn_projectile_impact(position: Vector2) -> void:
+	var parent := get_parent()
+	if not parent:
+		return
+	for i in range(5):
+		var spark := Line2D.new()
+		spark.name = "EnemyProjectileSpark"
+		spark.global_position = position
+		spark.rotation = TAU * float(i) / 5.0 + randf_range(-0.20, 0.20)
+		spark.width = 3.0
+		spark.default_color = Color(1.0, 0.32, 0.20, 0.70)
+		spark.z_index = 4092
+		spark.add_point(Vector2.ZERO)
+		spark.add_point(Vector2(randf_range(14.0, 28.0), 0.0))
+		parent.add_child(spark)
+		var tw := create_tween()
+		tw.tween_property(spark, "scale", Vector2(1.25, 1.25), 0.18)
+		tw.parallel().tween_property(spark, "modulate:a", 0.0, 0.18)
+		tw.tween_callback(spark.queue_free)
 
 
 func take_damage(amount: int, _source: Node2D = null) -> void:
@@ -171,6 +361,7 @@ func take_damage(amount: int, _source: Node2D = null) -> void:
 	current_hp = max(0, current_hp - amount)
 	health_changed.emit(current_hp, max_hp)
 	_spawn_damage_number(amount)
+	_check_phase_transition()
 	if current_hp > 0:
 		_say(hurt_lines, 0.35)
 		_play_audio_cue("enemy_hurt")
@@ -179,6 +370,54 @@ func take_damage(amount: int, _source: Node2D = null) -> void:
 		if _source is Node2D:
 			global_position += (global_position - (_source as Node2D).global_position).normalized() * 8.0
 	if current_hp <= 0: _die()
+
+
+func _check_phase_transition() -> void:
+	if not boss_like or phase_count <= 1 or max_hp <= 0 or _state == State.DEAD:
+		return
+	var hp_ratio := float(current_hp) / float(max_hp)
+	var next_phase := 0
+	if phase_count >= 2 and hp_ratio <= 0.66:
+		next_phase = 1
+	if phase_count >= 3 and hp_ratio <= 0.36:
+		next_phase = 2
+	if phase_count >= 4 and hp_ratio <= 0.16:
+		next_phase = 3
+	if next_phase <= _phase_index:
+		return
+	_phase_index = next_phase
+	var phase_mult := 1.0 + float(_phase_index) * 0.16
+	move_speed = _base_move_speed * phase_mult
+	attack_damage = maxi(1, int(round(float(_base_attack_damage) * (1.0 + float(_phase_index) * 0.20))))
+	attack_cooldown = maxf(0.42, _base_attack_cooldown * (1.0 - float(_phase_index) * 0.12))
+	telegraph_time = maxf(0.18, telegraph_time * 0.90)
+	_say(["Fase %d." % (_phase_index + 1), "Il varco risponde.", "Basta trattenersi."], 1.0, true)
+	_spawn_phase_burst()
+	_play_audio_cue("boss_phase")
+	phase_changed.emit(enemy_name, _phase_index)
+
+
+func _spawn_phase_burst() -> void:
+	var parent := get_parent()
+	if not parent:
+		return
+	var ring := Line2D.new()
+	ring.name = "BossPhaseBurst"
+	ring.closed = true
+	ring.width = 8.0
+	ring.default_color = Color(1.0, 0.58, 0.12, 0.82)
+	ring.global_position = global_position
+	ring.z_index = 4092
+	var radius := 72.0 + float(_phase_index) * 28.0
+	for i in range(64):
+		var a := TAU * float(i) / 64.0
+		ring.add_point(Vector2(cos(a) * radius, sin(a) * radius * 0.55))
+	parent.add_child(ring)
+	var tw := create_tween()
+	ring.scale = Vector2(0.35, 0.35)
+	tw.tween_property(ring, "scale", Vector2(1.3, 1.3), 0.34).set_trans(Tween.TRANS_QUAD)
+	tw.parallel().tween_property(ring, "modulate:a", 0.0, 0.42)
+	tw.tween_callback(ring.queue_free)
 
 
 func _die() -> void:

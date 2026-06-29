@@ -24,6 +24,7 @@ PlayerData="*res://scripts/progression/ClassData.gd"
 SaveManager="*res://scripts/systems/SaveManager.gd"
 ProceduralAudio="*res://scripts/systems/ProceduralAudio.gd"
 StoryData="*res://data/StoryData.gd"
+SystemMission="*res://scripts/systems/SystemMissionManager.gd"
 
 [display]
 

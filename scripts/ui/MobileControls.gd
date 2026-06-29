@@ -4,6 +4,8 @@ extends CanvasLayer
 
 signal move_vector_changed(direction: Vector2)
 signal mobile_attack
+signal mobile_dash
+signal mobile_skill(skill_id: String)
 signal mobile_inventory
 signal mobile_interact
 signal mobile_travel
@@ -15,8 +17,10 @@ var _joystick_base: Control
 var _joystick_knob: Control
 var _joystick_touch_index: int = -1
 var _attack_button: Button
+var _dash_button: Button
 var _inventory_button: Button
 var _travel_button: Button
+var _skill_buttons: Array[Button] = []
 
 var _base_center: Vector2
 var _current_direction: Vector2 = Vector2.ZERO
@@ -32,6 +36,8 @@ func _ready() -> void:
 
 	_create_joystick()
 	_create_attack_button()
+	_create_dash_button()
+	_create_skill_buttons()
 	_create_inventory_button()
 	_create_travel_button()
 
@@ -149,6 +155,68 @@ func _create_attack_button() -> void:
 	atk_label.add_theme_font_size_override("font_size", 32)
 	atk_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.7))
 	_attack_button.add_child(atk_label)
+
+
+func _create_dash_button() -> void:
+	_dash_button = Button.new()
+	_dash_button.name = "MobileDash"
+	_dash_button.text = ""
+	_dash_button.custom_minimum_size = Vector2(72, 72)
+	_dash_button.anchor_left = 1.0
+	_dash_button.anchor_bottom = 1.0
+	_dash_button.offset_left = -226
+	_dash_button.offset_bottom = -60
+	_dash_button.offset_right = -154
+	_dash_button.offset_top = -132
+	_style_action_button(_dash_button, Color(0.12, 0.55, 0.75, 0.45), Color(0.18, 0.78, 1.0, 0.65))
+	_dash_button.pressed.connect(func(): mobile_dash.emit())
+	add_child(_dash_button)
+
+	var label := Label.new()
+	label.text = "DASH"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.anchor_right = 1.0
+	label.anchor_bottom = 1.0
+	label.add_theme_font_size_override("font_size", 13)
+	label.add_theme_color_override("font_color", Color(0.74, 0.94, 1.0))
+	_dash_button.add_child(label)
+
+
+func _create_skill_buttons() -> void:
+	var skills := [
+		{"id": "charged_shot", "label": "1", "x": -302, "y": -58, "color": Color(0.18, 0.50, 0.95, 0.44)},
+		{"id": "piercing_shot", "label": "2", "x": -350, "y": -112, "color": Color(0.48, 0.24, 0.92, 0.44)},
+		{"id": "arcane_burst", "label": "3", "x": -294, "y": -166, "color": Color(0.12, 0.75, 0.62, 0.44)},
+		{"id": "guardian_aegis", "label": "4", "x": -238, "y": -184, "color": Color(0.95, 0.58, 0.16, 0.44)},
+	]
+	for def in skills:
+		var btn := Button.new()
+		btn.name = "MobileSkill_%s" % String(def["id"])
+		btn.text = ""
+		btn.custom_minimum_size = Vector2(48, 48)
+		btn.anchor_left = 1.0
+		btn.anchor_bottom = 1.0
+		btn.offset_left = float(def["x"])
+		btn.offset_bottom = float(def["y"])
+		btn.offset_right = float(def["x"]) + 48.0
+		btn.offset_top = float(def["y"]) - 48.0
+		var base_color: Color = def["color"]
+		_style_action_button(btn, base_color, Color(min(base_color.r + 0.16, 1.0), min(base_color.g + 0.16, 1.0), min(base_color.b + 0.16, 1.0), 0.66))
+		var skill_id := String(def["id"])
+		btn.pressed.connect(func(): mobile_skill.emit(skill_id))
+		add_child(btn)
+		_skill_buttons.append(btn)
+
+		var label := Label.new()
+		label.text = String(def["label"])
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.anchor_right = 1.0
+		label.anchor_bottom = 1.0
+		label.add_theme_font_size_override("font_size", 18)
+		label.add_theme_color_override("font_color", Color(0.92, 0.96, 1.0))
+		btn.add_child(label)
 
 
 func _create_inventory_button() -> void:

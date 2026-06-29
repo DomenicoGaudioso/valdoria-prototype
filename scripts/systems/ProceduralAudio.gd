@@ -60,6 +60,20 @@ func play_cue(cue: String) -> void:
 			set_combat_intensity(0.85)
 			_add_voice(170.0, 0.16, 0.28, "slash")
 			_add_voice(520.0, 0.12, 0.12, "spark")
+		"dash":
+			set_combat_intensity(0.35)
+			_add_voice(240.0, 0.12, 0.12, "rise")
+			_add_voice(760.0, 0.10, 0.08, "spark")
+		"dodge":
+			set_combat_intensity(0.45)
+			_add_voice(620.0, 0.16, 0.13, "spark")
+		"skill":
+			set_combat_intensity(0.90)
+			_add_voice(140.0, 0.22, 0.16, "rise")
+			_add_voice(520.0, 0.24, 0.13, "spark")
+		"enemy_telegraph":
+			set_combat_intensity(0.62)
+			_add_voice(120.0, 0.20, 0.12, "rise")
 		"enemy_attack":
 			set_combat_intensity(0.65)
 			_add_voice(95.0, 0.22, 0.22, "growl")
@@ -69,6 +83,13 @@ func play_cue(cue: String) -> void:
 		"enemy_death":
 			set_combat_intensity(0.75)
 			_add_voice(70.0, 0.45, 0.28, "fall")
+		"boss_phase":
+			set_combat_intensity(1.0)
+			_add_voice(48.0, 0.70, 0.28, "rise")
+			_add_voice(96.0, 0.42, 0.20, "growl")
+		"loot":
+			_add_voice(410.0, 0.14, 0.10, "spark")
+			_add_voice(760.0, 0.16, 0.07, "spark")
 		"equip":
 			_add_voice(330.0, 0.18, 0.15, "spark")
 			_add_voice(660.0, 0.20, 0.08, "spark")

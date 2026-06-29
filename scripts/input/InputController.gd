@@ -6,6 +6,8 @@ extends Node
 signal move_command(world_position: Vector2)
 signal move_vector_command(direction: Vector2)  # continuous movement from joystick
 signal attack_command(target: Node2D)
+signal dash_command
+signal skill_command(skill_id: String)
 signal toggle_inventory
 signal interact_command(target: Node2D)
 signal travel_command  # mobile travel/map button
@@ -41,6 +43,12 @@ func _connect_mobile() -> void:
 	if _mobile_controls and _mobile_controls.has_signal("mobile_attack"):
 		if not _mobile_controls.mobile_attack.is_connected(_on_mobile_attack):
 			_mobile_controls.mobile_attack.connect(_on_mobile_attack)
+	if _mobile_controls and _mobile_controls.has_signal("mobile_dash"):
+		if not _mobile_controls.mobile_dash.is_connected(_on_mobile_dash):
+			_mobile_controls.mobile_dash.connect(_on_mobile_dash)
+	if _mobile_controls and _mobile_controls.has_signal("mobile_skill"):
+		if not _mobile_controls.mobile_skill.is_connected(_on_mobile_skill):
+			_mobile_controls.mobile_skill.connect(_on_mobile_skill)
 	if _mobile_controls and _mobile_controls.has_signal("mobile_inventory"):
 		if not _mobile_controls.mobile_inventory.is_connected(_on_mobile_inventory):
 			_mobile_controls.mobile_inventory.connect(_on_mobile_inventory)
@@ -57,6 +65,14 @@ func _on_joystick_move(dir: Vector2) -> void:
 
 func _on_mobile_attack() -> void:
 	attack_command.emit(null)
+
+
+func _on_mobile_dash() -> void:
+	dash_command.emit()
+
+
+func _on_mobile_skill(skill_id: String) -> void:
+	skill_command.emit(skill_id)
 
 
 func _on_mobile_inventory() -> void:
@@ -145,6 +161,16 @@ func _handle_key(event: InputEventKey) -> void:
 			toggle_inventory.emit()
 		KEY_SPACE:
 			attack_command.emit(null)
+		KEY_SHIFT:
+			dash_command.emit()
+		KEY_1:
+			skill_command.emit("charged_shot")
+		KEY_2:
+			skill_command.emit("piercing_shot")
+		KEY_3:
+			skill_command.emit("arcane_burst")
+		KEY_4:
+			skill_command.emit("guardian_aegis")
 		KEY_ESCAPE:
 			toggle_inventory.emit()
 

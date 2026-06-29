@@ -303,6 +303,16 @@ const EQUIPMENT_TABLE: Dictionary = {
 	],
 }
 
+const LOOT_AFFIXES: Array[Dictionary] = [
+	{"name": "Affilato", "prefix": true, "dmg": 4, "spd": 0, "hp": 0, "agi": 1, "value": 1.22, "effect": "", "efx_val": 0.0},
+	{"name": "Rapido", "prefix": true, "dmg": 1, "spd": 18, "hp": 0, "agi": 3, "value": 1.18, "effect": "dodge_window", "efx_val": 0.08},
+	{"name": "Vampirico", "prefix": true, "dmg": 2, "spd": 0, "hp": 8, "agi": 0, "value": 1.34, "effect": "life_steal", "efx_val": 0.05},
+	{"name": "Runico", "prefix": true, "dmg": 2, "spd": 4, "hp": 12, "agi": 1, "value": 1.24, "effect": "cooldown_redux", "efx_val": 0.07},
+	{"name": "del Varco", "prefix": false, "dmg": 3, "spd": 8, "hp": 0, "agi": 2, "value": 1.28, "effect": "void_touch", "efx_val": 0.10},
+	{"name": "dell'Ascensione", "prefix": false, "dmg": 1, "spd": 0, "hp": 26, "agi": 0, "value": 1.36, "effect": "xp_boost", "efx_val": 0.10},
+	{"name": "della Guardia", "prefix": false, "dmg": 0, "spd": -2, "hp": 34, "agi": 0, "value": 1.26, "effect": "guardian_shield", "efx_val": 0.12},
+]
+
 
 static func create_equipment_from_def(def: Dictionary):
 	var item = Resource.new()
@@ -550,6 +560,48 @@ static func _scale_def_for_depth(base_def: Dictionary, depth: int) -> Dictionary
 	return def
 
 
+static func _apply_random_affixes(base_def: Dictionary, depth: int) -> Dictionary:
+	var def := base_def.duplicate(true)
+	var rarity := String(def.get("rarity", "common"))
+	var roll_count := 0
+	if rarity in ["rare", "epic"]:
+		roll_count = 1
+	elif rarity in ["legendary", "mythic", "archontic", "infinite"]:
+		roll_count = 2
+	if depth >= 8:
+		roll_count += 1
+	roll_count = mini(roll_count, 3)
+	if roll_count <= 0:
+		return def
+
+	var chosen: Array[Dictionary] = []
+	for _i in range(roll_count):
+		var affix: Dictionary = LOOT_AFFIXES[randi() % LOOT_AFFIXES.size()]
+		chosen.append(affix)
+
+	for affix in chosen:
+		def["dmg"] = int(def.get("dmg", 0)) + int(affix.get("dmg", 0)) + int(depth / 3)
+		def["hp"] = int(def.get("hp", 0)) + int(affix.get("hp", 0)) + int(depth * 2)
+		def["spd"] = int(def.get("spd", 0)) + int(affix.get("spd", 0))
+		def["agi"] = int(def.get("agi", _default_agility_from_def(def))) + int(affix.get("agi", 0))
+		def["value"] = int(round(float(def.get("value", 10)) * float(affix.get("value", 1.0))))
+		var effect_id := String(affix.get("effect", ""))
+		if not effect_id.is_empty() and (not def.has("effect") or String(def.get("effect", "")).is_empty() or randf() < 0.45):
+			def["effect"] = effect_id
+			def["efx_val"] = float(affix.get("efx_val", 0.0)) + min(0.18, float(depth) * 0.006)
+		if bool(affix.get("prefix", false)):
+			def["name"] = "%s %s" % [String(affix.get("name", "")), String(def.get("name", "Oggetto"))]
+		else:
+			def["name"] = "%s %s" % [String(def.get("name", "Oggetto")), String(affix.get("name", ""))]
+
+	var old_flavor := String(def.get("flavor", ""))
+	var names: Array[String] = []
+	for affix in chosen:
+		names.append(String(affix.get("name", "")))
+	def["flavor"] = ("%s\nAffissi: %s" % [old_flavor, ", ".join(names)]).strip_edges()
+	return def
+
+
 static func generate_random_loot(tier: int) -> Array:
 	var result := []
 	var depth := maxi(1, tier)
@@ -565,6 +617,7 @@ static func generate_random_loot(tier: int) -> Array:
 		if not tier_key.is_empty():
 			var pool: Array = EQUIPMENT_TABLE[tier_key]
 			var def: Dictionary = _scale_def_for_depth(pool[randi() % pool.size()], depth)
+			def = _apply_random_affixes(def, depth)
 			result.append({"type":"equip","def":def})
 
 	# Corrupted item chance (tier 3+)
