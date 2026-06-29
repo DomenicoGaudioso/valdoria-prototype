@@ -10,10 +10,10 @@ config_version=5
 
 [application]
 
-config/name="Valdoria Prototype"
-config/version="0.1.0"
+config/name="Eldrath"
+config/version="0.3.0"
 run/main_scene="res://scenes/main/Main.tscn"
-config/features=PackedStringArray("4.7")
+config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://assets/icons/icon.svg"
 
 [autoload]
@@ -22,6 +22,8 @@ InputController="*res://scripts/input/InputController.gd"
 Inventory="*res://scripts/inventory/Inventory.gd"
 PlayerData="*res://scripts/progression/ClassData.gd"
 SaveManager="*res://scripts/systems/SaveManager.gd"
+ProceduralAudio="*res://scripts/systems/ProceduralAudio.gd"
+StoryData="*res://data/StoryData.gd"
 
 [display]
 
@@ -30,6 +32,24 @@ window/size/viewport_height=720
 window/size/mode=2
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/handheld/orientation="landscape"
+
+[android]
+
+package/unique_name="com.eldrath.game"
+package/name="Eldrath"
+package/signed=true
+package/app_category=0
+graphics/opengl_debug=false
+screen/support_small=true
+screen/support_normal=true
+screen/support_large=true
+screen/support_xlarge=true
+xr_features/xr_mode=0
+
+[editor_plugins]
+
+enabled=PackedStringArray()
 
 [input]
 
@@ -85,6 +105,23 @@ load_game={
 "type": "InputEventKey"
 }]
 }
+toggle_real_city={
+"deadzone": 0.5,
+"events": [{
+"keycode": 77,
+"pressed": true,
+"type": "InputEventKey"
+}]
+}
+toggle_credits_map={
+"deadzone": 0.5,
+"events": [{
+"ctrl": true,
+"keycode": 67,
+"pressed": true,
+"type": "InputEventKey"
+}]
+}
 
 [input_devices]
 
@@ -101,6 +138,11 @@ pointing/emulate_touch_from_mouse=true
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
-renderer/rendering_method="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0.02, 0.05, 0.15, 1)
 quality/driver/driver_name="GLES3"
+renderer/rendering_method="mobile"
+2d/snap/snap_2d_transforms_to_pixel=true
+2d/snap/snap_2d_vertices_to_pixel=true
+anti_aliasing/quality/msaa_2d=1
+anti_aliasing/quality/msaa_3d=0

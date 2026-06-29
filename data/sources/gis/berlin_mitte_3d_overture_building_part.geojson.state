@@ -1,0 +1,14 @@
+{
+  "last_release": "2026-06-17.0",
+  "last_run": "2026-06-29T07:16:22.551420+00:00",
+  "theme": "buildings",
+  "type": "building_part",
+  "bbox": {
+    "xmin": 13.3705,
+    "ymin": 52.5132,
+    "xmax": 13.3908,
+    "ymax": 52.5238
+  },
+  "backend": "geojson",
+  "output": "C:\\Users\\Domenico\\Desktop\\Sacred\\data\\sources\\gis\\berlin_mitte_3d_overture_building_part.geojson"
+}

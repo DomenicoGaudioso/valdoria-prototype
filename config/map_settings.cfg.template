@@ -1,0 +1,31 @@
+# map_settings.cfg.template — Template pubblico (senza token)
+# ==================================================================================
+# Rinomina in map_settings.cfg e inserisci i tuoi token API.
+# NON COMMITTARE map_settings.cfg su Git!
+
+[general]
+default_mode="classic"
+default_city="new_york"
+
+[streaming]
+quality="medium"
+max_sse=16.0
+max_distance=3000.0
+memory_mb=512
+max_downloads=8
+use_google=false
+
+[cesium]
+# Registrati su https://ion.cesium.com per ottenere un token gratuito
+ion_access_token="INSERISCI_QUI_IL_TUO_TOKEN_CESIUM_ION"
+
+[google]
+# Registrati su https://developers.google.com/maps per Map Tiles API
+maps_api_key="INSERISCI_QUI_LA_TUA_GOOGLE_MAPS_API_KEY"
+
+[fallback]
+classic_fallback_map="black_oak_city"
+
+[attribution]
+show_credits_on_start=true
+force_attribution=true

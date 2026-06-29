@@ -6,6 +6,7 @@ signal health_changed(current_hp: int, max_hp: int)
 signal enemy_died(enemy: Node2D)
 signal drop_item(item_data)
 signal enemy_killed(xp_value: int, enemy_name: String)
+signal speech_requested(speaker: Node2D, text: String, tone_color: Color)
 
 enum State { IDLE, CHASE, ATTACK, DEAD }
 
@@ -23,6 +24,11 @@ enum State { IDLE, CHASE, ATTACK, DEAD }
 @export var xp_value: int = 10
 
 @export var loot_table: Array[Dictionary] = []
+@export var spawn_lines: Array[String] = []
+@export var attack_lines: Array[String] = []
+@export var hurt_lines: Array[String] = []
+@export var death_lines: Array[String] = []
+@export var voice_color: Color = Color(0.95, 0.35, 0.35)
 
 var _state: State = State.IDLE
 var _attack_timer: float = 0.0
@@ -36,10 +42,13 @@ var _walk_cycle: float = 0.0
 var _death_timer: float = 0.0
 var _last_move_dir: Vector2 = Vector2.DOWN
 var _base_sprite_position: Vector2 = Vector2.ZERO
+var _base_modulate: Color = Color.WHITE
+var _base_glow_modulate: Color = Color.WHITE
+var _speech_cooldown: float = 0.0
 var _frame_w: int = 128
 var _frame_h: int = 128
 
-# Frame ranges (columns in 128px grid): idle, run, attack, hit, die
+# Frame ranges: idle, run, attack, hit, die
 var _idle_range: Array[int] = [0, 4]
 var _run_range: Array[int] = [4, 12]
 var _attack_range: Array[int] = [12, 16]
@@ -50,6 +59,7 @@ var _frame_ranges := {}
 var _frame_rates := {}
 
 @onready var _sprite: Sprite2D = get_node_or_null("Sprite2D") as Sprite2D
+@onready var _sprite_glow: Sprite2D = get_node_or_null("SpriteGlow") as Sprite2D
 @onready var _shadow: Sprite2D = get_node_or_null("Shadow") as Sprite2D
 @onready var _detection_area: Area2D = get_node_or_null("DetectionArea") as Area2D
 
@@ -57,7 +67,11 @@ var _frame_rates := {}
 func _ready() -> void:
 	add_to_group("enemies")
 	current_hp = max_hp
-	if _sprite: _base_sprite_position = _sprite.position
+	if _sprite:
+		_base_sprite_position = _sprite.position
+		_base_modulate = _sprite.modulate
+	if _sprite_glow:
+		_base_glow_modulate = _sprite_glow.modulate
 	if _detection_area:
 		_detection_area.body_entered.connect(_on_body_entered_detection)
 		_detection_area.body_exited.connect(_on_body_exited_detection)
@@ -73,6 +87,7 @@ func _ready() -> void:
 		State.IDLE: 0.22, State.CHASE: 0.09,
 		State.ATTACK: 0.08, State.DEAD: 0.18,
 	}
+	call_deferred("_say_spawn")
 
 
 func _physics_process(delta: float) -> void:
@@ -83,6 +98,7 @@ func _physics_process(delta: float) -> void:
 	_attack_timer = max(0.0, _attack_timer - delta)
 	_flash_timer = max(0.0, _flash_timer - delta)
 	_dash_timer = max(0.0, _dash_timer - delta)
+	_speech_cooldown = max(0.0, _speech_cooldown - delta)
 	if velocity.length_squared() > 4.0:
 		_walk_cycle += delta * 9.0
 		_last_move_dir = velocity.normalized()
@@ -139,6 +155,8 @@ func _try_attack() -> void:
 	_flash_timer = 0.2
 	_anim_frame = _attack_range[0]
 	_anim_timer = 0.0
+	_say(attack_lines, 0.55)
+	_play_audio_cue("enemy_attack")
 
 	var dir := (_player.global_position - global_position).normalized()
 	_dash_velocity = dir
@@ -152,6 +170,10 @@ func take_damage(amount: int, _source: Node2D = null) -> void:
 	if _state == State.DEAD: return
 	current_hp = max(0, current_hp - amount)
 	health_changed.emit(current_hp, max_hp)
+	_spawn_damage_number(amount)
+	if current_hp > 0:
+		_say(hurt_lines, 0.35)
+		_play_audio_cue("enemy_hurt")
 	if _state == State.IDLE and _source:
 		_player = _source; _set_state(State.CHASE)
 		if _source is Node2D:
@@ -165,6 +187,9 @@ func _die() -> void:
 	_death_timer = 0.8
 	_anim_frame = _die_range[0]
 	_anim_timer = 0.0
+	_say(death_lines, 1.0, true)
+	_play_audio_cue("enemy_death")
+	_spawn_death_burst()
 	_spawn_loot()
 	enemy_killed.emit(xp_value, enemy_name)
 	enemy_died.emit(self)
@@ -204,9 +229,9 @@ func _update_sprite(delta: float) -> void:
 	
 	# Color per state
 	match _state:
-		State.ATTACK: _sprite.modulate = Color(1.5, 1.0, 0.8)
-		State.DEAD: _sprite.modulate = Color(0.55, 0.55, 0.65)
-		_: _sprite.modulate = Color.WHITE if _flash_timer <= 0.0 else Color(1.5, 1.3, 1.2)
+		State.ATTACK: _sprite.modulate = _boost_color(_base_modulate, 1.35)
+		State.DEAD: _sprite.modulate = Color(_base_modulate.r * 0.55, _base_modulate.g * 0.55, _base_modulate.b * 0.65, _base_modulate.a)
+		_: _sprite.modulate = _base_modulate if _flash_timer <= 0.0 else _boost_color(_base_modulate, 1.5)
 	
 	# Frame animation
 	var fr: Array = _frame_ranges.get(_state, [0, 4])
@@ -234,6 +259,7 @@ func _update_sprite(delta: float) -> void:
 	# Apply sprite frame
 	_sprite.region_enabled = true
 	_sprite.region_rect = Rect2(_anim_frame * _frame_w, dir_idx * _frame_h, _frame_w, _frame_h)
+	_sync_sprite_glow()
 	
 	# Bob and rotation for walk
 	if _state == State.IDLE or _state == State.CHASE:
@@ -241,6 +267,7 @@ func _update_sprite(delta: float) -> void:
 		var bob := sin(_walk_cycle) * 3.0 if moving else sin(Time.get_ticks_msec() / 520.0) * 0.9
 		_sprite.position = _base_sprite_position + Vector2(0, bob)
 		_sprite.rotation = lerpf(_sprite.rotation, clamp(velocity.x / max(move_speed, 1.0), -1.0, 1.0) * 0.06, min(delta * 8.0, 1.0))
+		_sync_sprite_glow()
 
 
 func _get_dir(d: Vector2) -> int:
@@ -253,6 +280,7 @@ func _get_dir(d: Vector2) -> int:
 func _update_sorting() -> void:
 	var z := int(global_position.y / 2.5)
 	if _sprite: _sprite.z_index = z
+	if _sprite_glow: _sprite_glow.z_index = z - 1
 	if _shadow: _shadow.z_index = z - 1
 
 
@@ -263,7 +291,98 @@ func _update_death(delta: float) -> void:
 	_sprite.rotation = lerpf(_sprite.rotation, 0.9, min(delta * 7.0, 1.0))
 	_sprite.modulate.a = 1.0 - phase
 	_sprite.position = _base_sprite_position + Vector2(0, phase * 16.0)
+	_sync_sprite_glow()
+	if _sprite_glow: _sprite_glow.modulate.a = _base_glow_modulate.a * (1.0 - phase)
 	if _shadow: _shadow.modulate.a = 1.0 - phase
 
 
+func _sync_sprite_glow() -> void:
+	if not _sprite_glow or not _sprite:
+		return
+	_sprite_glow.texture = _sprite.texture
+	_sprite_glow.region_enabled = _sprite.region_enabled
+	_sprite_glow.region_rect = _sprite.region_rect
+	_sprite_glow.position = _sprite.position
+	_sprite_glow.rotation = _sprite.rotation
+	var alpha_mult: float = 1.35 if _state == State.ATTACK else 1.0
+	_sprite_glow.modulate = Color(
+		_base_glow_modulate.r,
+		_base_glow_modulate.g,
+		_base_glow_modulate.b,
+		min(_base_glow_modulate.a * alpha_mult, 0.55)
+	)
+
+
+func _spawn_damage_number(amount: int) -> void:
+	var parent := get_parent()
+	if not parent:
+		return
+	var label := Label.new()
+	label.name = "DamageNumber"
+	label.text = "-%d" % amount
+	label.position = global_position + Vector2(randf_range(-22.0, 22.0), randf_range(-96.0, -74.0))
+	label.custom_minimum_size = Vector2(84.0, 0.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 15)
+	label.add_theme_color_override("font_color", Color(1.0, 0.76, 0.34, 1.0))
+	label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.88))
+	label.add_theme_constant_override("outline_size", 4)
+	label.z_index = 4094
+	parent.add_child(label)
+
+	var tw := create_tween()
+	tw.tween_property(label, "position:y", label.position.y - 34.0, 0.78).set_trans(Tween.TRANS_SINE)
+	tw.parallel().tween_property(label, "scale", Vector2(1.18, 1.18), 0.18)
+	tw.parallel().tween_property(label, "modulate:a", 0.0, 0.78)
+	tw.tween_callback(label.queue_free)
+
+
+func _spawn_death_burst() -> void:
+	var parent := get_parent()
+	if not parent:
+		return
+	for i in range(8):
+		var shard := Polygon2D.new()
+		shard.name = "DeathShard"
+		var r := randf_range(3.0, 6.0)
+		shard.polygon = PackedVector2Array([
+			Vector2(0.0, -r), Vector2(r * 0.55, 0.0), Vector2(0.0, r), Vector2(-r * 0.55, 0.0),
+		])
+		shard.color = Color(voice_color.r, voice_color.g, voice_color.b, 0.68)
+		shard.position = global_position + Vector2(randf_range(-18.0, 18.0), randf_range(-58.0, -28.0))
+		shard.rotation = randf_range(0.0, TAU)
+		shard.z_index = 4093
+		parent.add_child(shard)
+
+		var drift := Vector2(randf_range(-54.0, 54.0), randf_range(-72.0, -22.0))
+		var tw := create_tween()
+		tw.tween_property(shard, "position", shard.position + drift, 0.58).set_trans(Tween.TRANS_QUAD)
+		tw.parallel().tween_property(shard, "rotation", shard.rotation + randf_range(-2.8, 2.8), 0.58)
+		tw.parallel().tween_property(shard, "modulate:a", 0.0, 0.58)
+		tw.tween_callback(shard.queue_free)
+
+
 func is_dead() -> bool: return _state == State.DEAD
+
+
+func _say_spawn() -> void:
+	_say(spawn_lines, 0.85, true)
+
+
+func _say(lines: Array[String], chance: float, force: bool = false) -> void:
+	if lines.is_empty():
+		return
+	if not force and (_speech_cooldown > 0.0 or randf() > chance):
+		return
+	speech_requested.emit(self, lines[randi() % lines.size()], voice_color)
+	_speech_cooldown = 3.0
+
+
+func _boost_color(color: Color, amount: float) -> Color:
+	return Color(min(color.r * amount, 1.8), min(color.g * amount, 1.8), min(color.b * amount, 1.8), color.a)
+
+
+func _play_audio_cue(cue: String) -> void:
+	var audio := get_node_or_null("/root/ProceduralAudio")
+	if audio and audio.has_method("play_cue"):
+		audio.play_cue(cue)

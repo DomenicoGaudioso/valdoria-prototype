@@ -1,0 +1,14 @@
+{
+  "last_release": "2026-06-17.0",
+  "last_run": "2026-06-29T07:16:28.827315+00:00",
+  "theme": "buildings",
+  "type": "building",
+  "bbox": {
+    "xmin": 139.6962,
+    "ymin": 35.6572,
+    "xmax": 139.7108,
+    "ymax": 35.6656
+  },
+  "backend": "geojson",
+  "output": "C:\\Users\\Domenico\\Desktop\\Sacred\\data\\sources\\gis\\tokyo_shibuya_overture_building.geojson"
+}

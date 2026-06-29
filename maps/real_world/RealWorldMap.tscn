@@ -1,0 +1,72 @@
+[gd_scene load_steps=9 format=3 uid="uid://rwmap001"]
+
+[ext_resource type="Script" path="res://maps/real_world/RealWorldMap.gd" id="1"]
+[ext_resource type="Script" path="res://maps/real_world/PlayerSpawnController.gd" id="2"]
+[ext_resource type="Script" path="res://maps/real_world/CitySelector.gd" id="3"]
+[ext_resource type="Script" path="res://maps/real_world/MapLoader.gd" id="4"]
+[ext_resource type="Script" path="res://ui/LoadingMapScreen.gd" id="5"]
+[ext_resource type="Script" path="res://ui/MapCreditsPanel.gd" id="6"]
+
+[sub_resource type="BoxShape3D" id="BoxShape_huge"]
+size = Vector3(10000, 0.5, 10000)
+
+[sub_resource type="Environment" id="Environment_default"]
+ambient_light_source = 2
+ambient_light_color = Color(0.25, 0.28, 0.35, 1)
+background_mode = 2
+
+[node name="RealWorldMap" type="Node3D"]
+script = ExtResource("1")
+
+[node name="CesiumGeoreference" type="CesiumGeoreference" parent="."]
+
+[node name="Cesium3DTileset" type="Cesium3DTileset" parent="."]
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.642788, 0.766044, 0, -0.766044, 0.642788, 0, 0, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_default")
+
+[node name="GameplayCollisionLayer" type="StaticBody3D" parent="."]
+collision_layer = 1
+
+[node name="GroundPlane" type="CollisionShape3D" parent="GameplayCollisionLayer"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+shape = SubResource("BoxShape_huge")
+
+[node name="PlayerSpawnController" type="Node3D" parent="."]
+script = ExtResource("2")
+cesium_georeference = NodePath("../CesiumGeoreference")
+
+[node name="CitySelector" type="Node" parent="."]
+script = ExtResource("3")
+
+[node name="MapLoader" type="Node" parent="."]
+script = ExtResource("4")
+
+[node name="LoadingMapLayer" type="CanvasLayer" parent="."]
+layer = 100
+
+[node name="LoadingScreen" type="Control" parent="LoadingMapLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5")
+
+[node name="CreditsLayer" type="CanvasLayer" parent="."]
+layer = 90
+
+[node name="CreditsPanel" type="Control" parent="CreditsLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6")

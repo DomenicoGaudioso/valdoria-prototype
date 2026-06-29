@@ -1,5 +1,5 @@
 # Map Registry — all available maps with portal connections
-# Solo Leveling dungeon gates system
+# Original shadow-rift travel system
 
 const ALL_MAPS: Array[Dictionary] = [
 	{
@@ -12,7 +12,7 @@ const ALL_MAPS: Array[Dictionary] = [
 		"portals": [
 			{"target": "black_oak_city", "pos": Vector2(15, 90), "label": "Black Oak City"},
 			{"target": "nazia_highlands", "pos": Vector2(85, 15), "label": "Nazia Highlands"},
-			{"target": "grot_lagoon", "pos": Vector2(65, 80), "label": "[NEVE] Grot Lagoon"},
+			{"target": "grot_lagoon", "pos": Vector2(65, 80), "label": "Grot Lagoon"},
 		],
 	},
 	{
@@ -26,6 +26,102 @@ const ALL_MAPS: Array[Dictionary] = [
 			{"target": "black_oak_farm", "pos": Vector2(15, 90), "label": "Black Oak Farm"},
 			{"target": "merrimead_swamp", "pos": Vector2(85, 15), "label": "Merrimead Swamp"},
 			{"target": "stonewood", "pos": Vector2(50, 90), "label": "Stonewood"},
+			{"target": "roma_centro", "pos": Vector2(88, 88), "label": "Roma Centro"},
+			{"target": "new_york", "pos": Vector2(15, 15), "label": "New York"},
+		],
+	},
+	# === REAL CITY GATES (OSM / GIS derived) ===
+	{
+		"id": "roma_centro",
+		"tileset": "grassland",
+		"real_city": true,
+		"city_style": "ancient",
+		"title": "Roma Centro",
+		"desc": "Mappa GIS stilizzata da OpenStreetMap: Colosseo, Fori, Tevere e centro antico.",
+		"bbox": [41.8848, 12.4738, 41.9048, 12.5038],
+		"osm_source": "res://data/sources/osm/roma_centro.overpass.json",
+		"detail_source": "res://data/sources/gis/roma_centro_overture_buildings.compact.json",
+		"detail_kind": "overture_buildings",
+		"data": preload("res://data/maps/roma_centro_data.gd"),
+		"hero_spawn": Vector2(50, 54),
+		"portals": [
+			{"target": "black_oak_city", "pos": Vector2(12, 88), "label": "Black Oak City"},
+			{"target": "venezia_rialto", "pos": Vector2(88, 14), "label": "Venezia"},
+			{"target": "parigi_cite", "pos": Vector2(88, 88), "label": "Parigi"},
+			{"target": "cyberpunk", "pos": Vector2(14, 14), "label": "Cyberpunk"},
+		],
+	},
+	{
+		"id": "venezia_rialto",
+		"tileset": "grassland",
+		"real_city": true,
+		"city_style": "water_city",
+		"title": "Venezia Rialto",
+		"desc": "Mappa GIS stilizzata da OpenStreetMap: Rialto, San Marco, calli e canali.",
+		"bbox": [45.4313, 12.3250, 45.4438, 12.3480],
+		"osm_source": "res://data/sources/osm/venezia_rialto.overpass.json",
+		"detail_source": "res://data/sources/gis/venezia_rialto_overture_buildings.compact.json",
+		"detail_kind": "overture_buildings",
+		"data": preload("res://data/maps/venezia_rialto_data.gd"),
+		"hero_spawn": Vector2(52, 48),
+		"portals": [
+			{"target": "roma_centro", "pos": Vector2(12, 88), "label": "Roma"},
+			{"target": "parigi_cite", "pos": Vector2(88, 14), "label": "Parigi"},
+		],
+	},
+	{
+		"id": "parigi_cite",
+		"tileset": "grassland",
+		"real_city": true,
+		"city_style": "gothic",
+		"title": "Parigi Ile de la Cite",
+		"desc": "Mappa GIS stilizzata da OpenStreetMap: Notre-Dame, Senna e asse storico.",
+		"bbox": [48.8512, 2.3412, 48.8588, 2.3548],
+		"osm_source": "res://data/sources/osm/parigi_cite.overpass.json",
+		"detail_source": "res://data/sources/gis/paris_volumesbatis_ile_cite.compact.json",
+		"detail_kind": "paris_volumes_batis",
+		"data": preload("res://data/maps/parigi_cite_data.gd"),
+		"hero_spawn": Vector2(49, 50),
+		"portals": [
+			{"target": "roma_centro", "pos": Vector2(12, 88), "label": "Roma"},
+			{"target": "venezia_rialto", "pos": Vector2(50, 88), "label": "Venezia"},
+			{"target": "berlin_mitte_3d", "pos": Vector2(88, 14), "label": "Berlino"},
+		],
+	},
+	{
+		"id": "berlin_mitte_3d",
+		"tileset": "grassland",
+		"real_city": true,
+		"city_style": "urban_3d",
+		"title": "Berlino Mitte 3D",
+		"desc": "Mappa GIS urbana da OpenStreetMap: edifici densi e stile 3D isometrico.",
+		"bbox": [52.5132, 13.3705, 52.5238, 13.3908],
+		"osm_source": "res://data/sources/osm/berlin_mitte_3d.overpass.json",
+		"detail_source": "res://data/sources/gis/berlin_mitte_3d_overture_buildings.compact.json",
+		"detail_kind": "overture_buildings",
+		"data": preload("res://data/maps/berlin_mitte_3d_data.gd"),
+		"hero_spawn": Vector2(47, 53),
+		"portals": [
+			{"target": "parigi_cite", "pos": Vector2(12, 88), "label": "Parigi"},
+			{"target": "tokyo_shibuya", "pos": Vector2(88, 14), "label": "Tokyo"},
+		],
+	},
+	{
+		"id": "tokyo_shibuya",
+		"tileset": "grassland",
+		"real_city": true,
+		"city_style": "dense_3d",
+		"title": "Tokyo Shibuya",
+		"desc": "Mappa GIS urbana da OpenStreetMap: Shibuya, griglia densa e skyline stilizzato.",
+		"bbox": [35.6572, 139.6962, 35.6656, 139.7108],
+		"osm_source": "res://data/sources/osm/tokyo_shibuya.overpass.json",
+		"detail_source": "res://data/sources/gis/tokyo_shibuya_overture_buildings.compact.json",
+		"detail_kind": "overture_buildings",
+		"data": preload("res://data/maps/tokyo_shibuya_data.gd"),
+		"hero_spawn": Vector2(52, 52),
+		"portals": [
+			{"target": "berlin_mitte_3d", "pos": Vector2(12, 88), "label": "Berlino"},
+			{"target": "roma_centro", "pos": Vector2(88, 88), "label": "Roma"},
 		],
 	},
 	{
@@ -146,7 +242,7 @@ const ALL_MAPS: Array[Dictionary] = [
 		"hero_spawn": Vector2(56, 56),
 		"portals": [
 			{"target": "black_oak_farm", "pos": Vector2(15, 100), "label": "Black Oak Farm"},
-			{"target": "lake_kuuma", "pos": Vector2(100, 15), "label": "[NEVE] Lake Kuuma"},
+			{"target": "lake_kuuma", "pos": Vector2(100, 15), "label": "Lake Kuuma"},
 		],
 	},
 	{
@@ -157,7 +253,7 @@ const ALL_MAPS: Array[Dictionary] = [
 		"data": preload("res://data/maps/lake_kuuma_data.gd"),
 		"hero_spawn": Vector2(66, 66),
 		"portals": [
-			{"target": "grot_lagoon", "pos": Vector2(15, 120), "label": "[NEVE] Grot Lagoon"},
+			{"target": "grot_lagoon", "pos": Vector2(15, 120), "label": "Grot Lagoon"},
 		],
 	},
 	# === DUNGEON (Sotterranei / Fortezze / Fogne) ===
@@ -169,8 +265,8 @@ const ALL_MAPS: Array[Dictionary] = [
 		"data": preload("res://data/maps/fort_nasu_data.gd"),
 		"hero_spawn": Vector2(50, 50),
 		"portals": [
-			{"target": "fort_amir", "pos": Vector2(15, 90), "label": "[DUNGEON] Fort Amir"},
-			{"target": "stormrock_ruins", "pos": Vector2(90, 15), "label": "[DUNGEON] Stormrock"},
+			{"target": "fort_amir", "pos": Vector2(15, 90), "label": "Fort Amir"},
+			{"target": "stormrock_ruins", "pos": Vector2(90, 15), "label": "Stormrock"},
 			{"target": "black_oak_city", "pos": Vector2(50, 90), "label": "Black Oak City"},
 		],
 	},
@@ -182,8 +278,8 @@ const ALL_MAPS: Array[Dictionary] = [
 		"data": preload("res://data/maps/fort_amir_data.gd"),
 		"hero_spawn": Vector2(40, 40),
 		"portals": [
-			{"target": "fort_nasu", "pos": Vector2(15, 70), "label": "[DUNGEON] Fort Nasu"},
-			{"target": "dilapidated_sewers", "pos": Vector2(70, 15), "label": "[DUNGEON] Fogne"},
+			{"target": "fort_nasu", "pos": Vector2(15, 70), "label": "Fort Nasu"},
+			{"target": "dilapidated_sewers", "pos": Vector2(70, 15), "label": "Fogne"},
 		],
 	},
 	{
@@ -194,8 +290,8 @@ const ALL_MAPS: Array[Dictionary] = [
 		"data": preload("res://data/maps/dilapidated_sewers_data.gd"),
 		"hero_spawn": Vector2(40, 40),
 		"portals": [
-			{"target": "fort_amir", "pos": Vector2(15, 70), "label": "[DUNGEON] Fort Amir"},
-			{"target": "stormrock_ruins", "pos": Vector2(70, 15), "label": "[DUNGEON] Stormrock"},
+			{"target": "fort_amir", "pos": Vector2(15, 70), "label": "Fort Amir"},
+			{"target": "stormrock_ruins", "pos": Vector2(70, 15), "label": "Stormrock"},
 		],
 	},
 	{
@@ -206,9 +302,9 @@ const ALL_MAPS: Array[Dictionary] = [
 		"data": preload("res://data/maps/stormrock_ruins_data.gd"),
 		"hero_spawn": Vector2(50, 50),
 		"portals": [
-			{"target": "fort_nasu", "pos": Vector2(15, 90), "label": "[DUNGEON] Fort Nasu"},
-			{"target": "dilapidated_sewers", "pos": Vector2(90, 15), "label": "[DUNGEON] Fogne"},
-			{"target": "st_maria_1", "pos": Vector2(50, 90), "label": "[DUNGEON] St. Maria"},
+			{"target": "fort_nasu", "pos": Vector2(15, 90), "label": "Fort Nasu"},
+			{"target": "dilapidated_sewers", "pos": Vector2(90, 15), "label": "Fogne"},
+			{"target": "st_maria_1", "pos": Vector2(50, 90), "label": "St. Maria"},
 		],
 	},
 	{
@@ -219,8 +315,8 @@ const ALL_MAPS: Array[Dictionary] = [
 		"data": preload("res://data/maps/st_maria_1_data.gd"),
 		"hero_spawn": Vector2(35, 35),
 		"portals": [
-			{"target": "stormrock_ruins", "pos": Vector2(15, 60), "label": "[DUNGEON] Stormrock"},
-			{"target": "st_maria_2", "pos": Vector2(60, 15), "label": "[DUNGEON] St. Maria II"},
+			{"target": "stormrock_ruins", "pos": Vector2(15, 60), "label": "Stormrock"},
+			{"target": "st_maria_2", "pos": Vector2(60, 15), "label": "St. Maria II"},
 		],
 	},
 	{
@@ -231,8 +327,8 @@ const ALL_MAPS: Array[Dictionary] = [
 		"data": preload("res://data/maps/st_maria_2_data.gd"),
 		"hero_spawn": Vector2(35, 35),
 		"portals": [
-			{"target": "st_maria_1", "pos": Vector2(15, 60), "label": "[DUNGEON] St. Maria I"},
-			{"target": "st_maria_3", "pos": Vector2(60, 15), "label": "[DUNGEON] St. Maria III"},
+			{"target": "st_maria_1", "pos": Vector2(15, 60), "label": "St. Maria I"},
+			{"target": "st_maria_3", "pos": Vector2(60, 15), "label": "St. Maria III"},
 		],
 	},
 	{
@@ -243,7 +339,7 @@ const ALL_MAPS: Array[Dictionary] = [
 		"data": preload("res://data/maps/st_maria_3_data.gd"),
 		"hero_spawn": Vector2(20, 30),
 		"portals": [
-			{"target": "st_maria_2", "pos": Vector2(15, 50), "label": "[DUNGEON] St. Maria II"},
+			{"target": "st_maria_2", "pos": Vector2(15, 50), "label": "St. Maria II"},
 		],
 	},
 	{
@@ -254,7 +350,144 @@ const ALL_MAPS: Array[Dictionary] = [
 		"data": preload("res://data/maps/book_of_the_dead_data.gd"),
 		"hero_spawn": Vector2(16, 25),
 		"portals": [
-			{"target": "stormrock_ruins", "pos": Vector2(15, 40), "label": "[DUNGEON] Stormrock"},
+			{"target": "stormrock_ruins", "pos": Vector2(15, 40), "label": "Stormrock"},
+		],
+	},
+	# === CITTA 3D LOCALI (Sketchfab, CC-BY-4.0) ===
+	{
+		"id": "new_york",
+		"tileset": "grassland",
+		"title": "New York City",
+		"desc": "La citta che non dorme mai. Ora infestata da creature del Portale.",
+		"data": preload("res://data/maps/new_york_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "black_oak_city", "pos": Vector2(10, 75), "label": "Black Oak City"},
+			{"target": "cyberpunk", "pos": Vector2(75, 10), "label": "Cyberpunk City"},
+			{"target": "ruined_city", "pos": Vector2(75, 75), "label": "Ruined City"},
+		],
+	},
+	{
+		"id": "manhattan",
+		"tileset": "grassland",
+		"title": "Manhattan Skyline",
+		"desc": "I grattacieli di Manhattan, ora nidi di viverni e draghi.",
+		"data": preload("res://data/maps/manhattan_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "new_york", "pos": Vector2(10, 75), "label": "New York City"},
+			{"target": "black_oak_city", "pos": Vector2(75, 10), "label": "Black Oak City"},
+		],
+	},
+	{
+		"id": "cyberpunk",
+		"tileset": "grassland",
+		"title": "Cyberpunk City",
+		"desc": "Metropoli oscura tra neon e acciaio. Maghi e costrutti ovunque.",
+		"data": preload("res://data/maps/cyberpunk_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "new_york", "pos": Vector2(10, 75), "label": "New York City"},
+			{"target": "tokyo_shibuya", "pos": Vector2(75, 10), "label": "Tokyo"},
+			{"target": "lowpoly_night", "pos": Vector2(75, 75), "label": "Low-Poly Night"},
+		],
+	},
+	{
+		"id": "lowpoly_night",
+		"tileset": "grassland",
+		"title": "Low-Poly City Night",
+		"desc": "Citta notturna illuminata. Ombre e creature si nascondono nei vicoli.",
+		"data": preload("res://data/maps/lowpoly_night_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "cyberpunk", "pos": Vector2(10, 75), "label": "Cyberpunk City"},
+			{"target": "postwar_city", "pos": Vector2(75, 10), "label": "Postwar City"},
+		],
+	},
+	{
+		"id": "postwar_city",
+		"tileset": "grassland",
+		"title": "Postwar City",
+		"desc": "Rovine urbane dopo la guerra dei Portali. Zombie e lich tra le macerie.",
+		"data": preload("res://data/maps/postwar_city_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "lowpoly_night", "pos": Vector2(10, 75), "label": "Low-Poly Night"},
+			{"target": "ruined_city", "pos": Vector2(75, 10), "label": "Ruined City"},
+			{"target": "stormrock_ruins", "pos": Vector2(75, 75), "label": "Stormrock"},
+		],
+	},
+	{
+		"id": "ruined_city",
+		"tileset": "grassland",
+		"title": "Ruined City",
+		"desc": "Citta in rovina. Non-morti e draghi pattugliano le strade distrutte.",
+		"data": preload("res://data/maps/ruined_city_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "postwar_city", "pos": Vector2(10, 75), "label": "Postwar City"},
+			{"target": "new_york", "pos": Vector2(75, 10), "label": "New York City"},
+			{"target": "procedural2", "pos": Vector2(75, 75), "label": "Procedural City 2"},
+		],
+	},
+	{
+		"id": "procedural2",
+		"tileset": "grassland",
+		"title": "Procedural City 2",
+		"desc": "Blocco urbano generato dal Portale. Nemici imprevedibili.",
+		"data": preload("res://data/maps/procedural2_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "ruined_city", "pos": Vector2(10, 75), "label": "Ruined City"},
+			{"target": "procedural3", "pos": Vector2(75, 10), "label": "Procedural City 3"},
+		],
+	},
+	{
+		"id": "procedural3",
+		"tileset": "grassland",
+		"title": "Procedural City 3",
+		"desc": "Quartiere denso generato dal Portale. Orchi e goblin tra i palazzi.",
+		"data": preload("res://data/maps/procedural3_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "procedural2", "pos": Vector2(10, 75), "label": "Procedural City 2"},
+			{"target": "procedural4", "pos": Vector2(75, 10), "label": "Procedural City 4"},
+		],
+	},
+	{
+		"id": "procedural4",
+		"tileset": "grassland",
+		"title": "Procedural City 4",
+		"desc": "Blocco urbano generato dal Portale. Creature di ogni dimensione.",
+		"data": preload("res://data/maps/procedural4_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "procedural3", "pos": Vector2(10, 75), "label": "Procedural City 3"},
+			{"target": "procedural5", "pos": Vector2(75, 10), "label": "Procedural City 5"},
+		],
+	},
+	{
+		"id": "procedural5",
+		"tileset": "grassland",
+		"title": "Procedural City 5",
+		"desc": "Distretto generato dal Portale. La densita di mostri e estrema.",
+		"data": preload("res://data/maps/procedural5_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "procedural4", "pos": Vector2(10, 75), "label": "Procedural City 4"},
+			{"target": "procedural6", "pos": Vector2(75, 10), "label": "Procedural City 6"},
+		],
+	},
+	{
+		"id": "procedural6",
+		"tileset": "grassland",
+		"title": "Procedural City 6",
+		"desc": "Ultimo blocco generato dal Portale. Il boss ti aspetta in cima.",
+		"data": preload("res://data/maps/procedural6_data.gd"),
+		"hero_spawn": Vector2(40, 40),
+		"portals": [
+			{"target": "procedural5", "pos": Vector2(10, 75), "label": "Procedural City 5"},
+			{"target": "cyberpunk", "pos": Vector2(75, 10), "label": "Cyberpunk City"},
 		],
 	},
 ]

@@ -19,6 +19,13 @@ batch_convert.py
 Thumbs.db
 .DS_Store
 
+# Secrets / API keys
+config/map_settings.cfg
+!config/map_settings.cfg.template
+*.env
+secrets/
+
 # Build
+build/
 *.exe
 *.pck

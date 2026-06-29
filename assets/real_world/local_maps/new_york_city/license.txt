@@ -1,0 +1,11 @@
+Model Information:
+* title:	New York City
+* source:	https://sketchfab.com/3d-models/new-york-city-4737b6ee73ed4634ad5b414558fdfa45
+* author:	golukumar (https://sketchfab.com/mortalityrexotable)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "New York City" (https://sketchfab.com/3d-models/new-york-city-4737b6ee73ed4634ad5b414558fdfa45) by golukumar (https://sketchfab.com/mortalityrexotable) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

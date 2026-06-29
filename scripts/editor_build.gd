@@ -5,7 +5,7 @@ extends EditorScript
 ## Creates all scenes with proper texture references.
 
 func _run() -> void:
-	print("=== VALDORIA — Editor Build ===")
+	print("=== ELDRATH - Editor Build ===")
 	_create_all()
 	print("=== COMPLETATO. Apri scenes/main/Main.tscn e premi F5 ===")
 

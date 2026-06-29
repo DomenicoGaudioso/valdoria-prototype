@@ -1,28 +1,81 @@
 extends Node
 
 ## InputController — Centralized input handler.
-## Converts mouse, touch, and keyboard events into abstract game commands.
-## The rest of the game never checks for specific input types directly.
+## Converts mouse, touch, keyboard, and mobile joystick into abstract game commands.
 
 signal move_command(world_position: Vector2)
+signal move_vector_command(direction: Vector2)  # continuous movement from joystick
 signal attack_command(target: Node2D)
 signal toggle_inventory
 signal interact_command(target: Node2D)
+signal travel_command  # mobile travel/map button
 
 @export var touch_deadzone: float = 10.0
 @export var touch_min_duration: float = 0.05
 @export var touch_max_duration: float = 0.3
 @export var ui_layer: CanvasLayer
+@export var mobile_controls_path: NodePath
 
 var _touch_start_position: Vector2 = Vector2.ZERO
 var _touch_start_time: float = 0.0
 var _is_touching: bool = false
 var _touch_over_ui: bool = false
+var _mobile_controls: CanvasLayer
+var _joystick_active: bool = false
+var _joystick_direction: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	call_deferred("_connect_mobile")
+
+
+func _connect_mobile() -> void:
+	if mobile_controls_path and not mobile_controls_path.is_empty():
+		_mobile_controls = get_node_or_null(mobile_controls_path) as CanvasLayer
+	elif has_node("/root/Main/MobileControls"):
+		_mobile_controls = get_node_or_null("/root/Main/MobileControls") as CanvasLayer
+
+	if _mobile_controls and _mobile_controls.has_signal("move_vector_changed"):
+		if not _mobile_controls.move_vector_changed.is_connected(_on_joystick_move):
+			_mobile_controls.move_vector_changed.connect(_on_joystick_move)
+	if _mobile_controls and _mobile_controls.has_signal("mobile_attack"):
+		if not _mobile_controls.mobile_attack.is_connected(_on_mobile_attack):
+			_mobile_controls.mobile_attack.connect(_on_mobile_attack)
+	if _mobile_controls and _mobile_controls.has_signal("mobile_inventory"):
+		if not _mobile_controls.mobile_inventory.is_connected(_on_mobile_inventory):
+			_mobile_controls.mobile_inventory.connect(_on_mobile_inventory)
+	if _mobile_controls and _mobile_controls.has_signal("mobile_travel"):
+		if not _mobile_controls.mobile_travel.is_connected(_on_mobile_travel):
+			_mobile_controls.mobile_travel.connect(_on_mobile_travel)
+
+
+func _on_joystick_move(dir: Vector2) -> void:
+	_joystick_active = dir.length_squared() > 0.001
+	_joystick_direction = dir
+	move_vector_command.emit(dir)
+
+
+func _on_mobile_attack() -> void:
+	attack_command.emit(null)
+
+
+func _on_mobile_inventory() -> void:
+	toggle_inventory.emit()
+
+
+func _on_mobile_travel() -> void:
+	travel_command.emit()
+
+
+func _process(_delta: float) -> void:
+	if _joystick_active:
+		move_vector_command.emit(_joystick_direction)
 
 func _input(event: InputEvent) -> void:
+	if _is_activation_event(event):
+		var audio := get_node_or_null("/root/ProceduralAudio")
+		if audio and audio.has_method("start_after_user_gesture"):
+			audio.start_after_user_gesture()
 	if event is InputEventMouseButton:
 		_handle_mouse(event)
 	elif event is InputEventScreenTouch:
@@ -111,3 +164,13 @@ func get_world_position_from_screen(screen_position: Vector2) -> Vector2:
 	if camera:
 		return camera.get_screen_transform().affine_inverse() * screen_position
 	return screen_position
+
+
+func _is_activation_event(event: InputEvent) -> bool:
+	if event is InputEventMouseButton:
+		return event.pressed
+	if event is InputEventScreenTouch:
+		return event.pressed
+	if event is InputEventKey:
+		return event.pressed
+	return false
