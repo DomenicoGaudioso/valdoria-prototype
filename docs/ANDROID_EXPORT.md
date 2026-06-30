@@ -22,6 +22,8 @@ La cartella `secrets/` e ignorata da git. Non pubblicare il keystore e non perde
 - Godot 4.7.
 - JDK 17.
 - Android SDK in `C:\Android\Sdk`.
+- Platform tools: `C:\Android\Sdk\platform-tools\adb.exe`.
+- Build tools: `C:\Android\Sdk\build-tools\35.0.0\apksigner.bat` e `zipalign.exe`.
 - Export templates Godot in `%APPDATA%\Godot\export_templates\4.7.stable`.
 
 ## Build Amazon Appstore
@@ -32,6 +34,31 @@ $godot = "C:\Users\Domenico\AppData\Local\Microsoft\WinGet\Packages\GodotEngine.
 ```
 
 Se il preset non contiene le password, inserirle temporaneamente da `secrets/android_release_keystore_credentials.txt`, esportare, poi rimuoverle.
+
+## QA locale mobile
+
+Smoke headless dei controlli mobile:
+
+```powershell
+$env:ELDRATH_FORCE_MOBILE_CONTROLS = "1"
+& $godot --headless --path "C:\Users\Domenico\Desktop\Sacred" --script tools/smoke_mobile_controls.gd
+Remove-Item Env:\ELDRATH_FORCE_MOBILE_CONTROLS
+```
+
+APK debug non pubblicabile, utile per installazione locale:
+
+```powershell
+& $godot --headless --path "C:\Users\Domenico\Desktop\Sacred" --export-debug "Android" "build/qa/Eldrath-debug.apk"
+& "C:\Android\Sdk\build-tools\35.0.0\apksigner.bat" verify --verbose --print-certs "build/qa/Eldrath-debug.apk"
+& "C:\Android\Sdk\build-tools\35.0.0\zipalign.exe" -c -p 4 "build/qa/Eldrath-debug.apk"
+```
+
+Installazione su device/emulatore, solo se `adb devices -l` mostra almeno un dispositivo:
+
+```powershell
+& "C:\Android\Sdk\platform-tools\adb.exe" devices -l
+& "C:\Android\Sdk\platform-tools\adb.exe" install -r "build/qa/Eldrath-debug.apk"
+```
 
 ## Upload Amazon
 

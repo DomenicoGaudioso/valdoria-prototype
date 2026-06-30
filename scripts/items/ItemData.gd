@@ -606,7 +606,7 @@ static func generate_random_loot(tier: int) -> Array:
 	var result := []
 	var depth := maxi(1, tier)
 	var loot_tier := clampi(depth, 1, 6)
-	var gold_amount := depth * 5 + randi() % (depth * 10 + 1)
+	var gold_amount := depth * 8 + int(pow(float(depth), 1.35)) + randi() % (depth * 14 + 1)
 	result.append({"type":"gold","amount":gold_amount,"name":"%d Oro" % gold_amount})
 
 	var equip_chance: float = min(0.92, 0.22 + float(depth) * 0.08)

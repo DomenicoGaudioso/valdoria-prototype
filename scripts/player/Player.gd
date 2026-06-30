@@ -492,7 +492,6 @@ func _level_up() -> void:
 		ascension_level += 1
 		ascension_points += 1
 		season_level = maxi(season_level, int(floor(float(level - 100) / 25.0)) + 1)
-		highest_portal_depth = maxi(highest_portal_depth, ascension_level + 1)
 
 	base_hp += 18 if post_100 else 25
 	base_damage += 2 if post_100 else 3
@@ -521,12 +520,23 @@ func _level_up() -> void:
 	_try_speak(["Sento l'ombra crescere.", "Un altro limite cade.", "Piu forte."], 1.0)
 
 
-func _calculate_next_xp_required(new_level: int, previous_required: int) -> int:
-	if new_level <= 100:
-		return maxi(30, int(float(previous_required) * 1.32))
-	var over_cap := new_level - 100
-	var linear_growth := 220 + over_cap * 38
-	return maxi(previous_required + linear_growth, 12000 + over_cap * 420)
+func _calculate_next_xp_required(new_level: int, _previous_required: int) -> int:
+	var level_for_requirement := maxi(1, new_level)
+	var required := 30
+	if level_for_requirement <= 20:
+		var n := level_for_requirement - 1
+		required = 30 + n * 18 + n * n * 5
+	elif level_for_requirement <= 60:
+		var n := level_for_requirement - 20
+		required = 2177 + n * 170 + n * n * 24
+	elif level_for_requirement <= 100:
+		var n := level_for_requirement - 60
+		required = 47377 + n * 950 + n * n * 70
+	else:
+		var n := level_for_requirement - 100
+		required = 197377 + n * 4500 + n * n * 180
+	# Piecewise polynomial curve: fast early, slower to 100, controlled post-cap.
+	return clampi(required, 30, 5000000)
 
 
 func add_gold(amount: int) -> void:
@@ -582,13 +592,13 @@ func _recalc_equip_stats() -> void:
 			def_bonus += int(item.get("stat_armor"))
 			agi_bonus += int(item.get("stat_agility"))
 			# Corrupted items: apply percentage-based malus
-			if item.get("corrupted"):
-				var eid: String = str(item.get("effect_id", ""))
+			if _item_get(item, "corrupted", false):
+				var eid: String = str(_item_get(item, "effect_id", ""))
 				if eid == "blood_ring":
 					dmg_bonus += int(base_damage * 0.30)
 					corrupted_hp_penalty += 0.0  # applied as +30% dmg taken elsewhere
 				elif eid == "cursed_blade":
-					dmg_bonus += int(base_damage * float(item.get("effect_value", 0.0)))
+					dmg_bonus += int(base_damage * float(_item_get(item, "effect_value", 0.0)))
 					corrupted_hp_penalty += 0.20
 				elif eid == "void_drinker":
 					corrupted_hp_penalty += 0.30
@@ -607,11 +617,16 @@ func _recalc_equip_stats() -> void:
 func _apply_item_effects(item, activate: bool) -> void:
 	if item == null:
 		return
-	var eid: String = str(item.get("effect_id", ""))
+	var eid: String = str(_item_get(item, "effect_id", ""))
 	if eid.is_empty():
 		return
-	var val: float = float(item.get("effect_value", 0.0))
+	var val: float = float(_item_get(item, "effect_value", 0.0))
 	_apply_effect_mod(eid, val, activate)
+
+
+func _item_get(item, property_name: String, default_value = null):
+	var value = item.get(property_name)
+	return default_value if value == null else value
 
 
 func _rebuild_equipment_effects() -> void:

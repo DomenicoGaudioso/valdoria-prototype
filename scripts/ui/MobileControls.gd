@@ -43,7 +43,7 @@ func _ready() -> void:
 
 func _is_mobile() -> bool:
 	var os_name: String = OS.get_name()
-	return os_name in ["Android", "iOS", "Web"] or OS.has_feature("mobile")
+	return os_name in ["Android", "iOS", "Web"] or OS.has_feature("mobile") or OS.get_environment("ELDRATH_FORCE_MOBILE_CONTROLS") == "1"
 
 
 func _create_joystick() -> void:

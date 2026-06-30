@@ -11,6 +11,16 @@ const BossLoreClass: GDScript = preload("res://data/BossLore.gd")
 const SkillTreeClass: GDScript = preload("res://scripts/progression/SkillTree.gd")
 const EVAL_START_MAP: String = "black_oak_city"
 const FORCE_REAL_CITY_START: bool = false
+const ENDLESS_PORTAL_PREFIX: String = "endless_portal_"
+const ENDLESS_START_DEPTH: int = 7
+const ENDLESS_ARENA_IDS: Array[String] = ["procedural4", "procedural5", "procedural6", "ruined_city", "cyberpunk"]
+const ENDLESS_VARIANTS: Array[Dictionary] = [
+	{"name": "Eclisse", "desc": "Arcanisti e non-morti saturano l'arena.", "enemies": ["lich", "mage", "skeleton_a"], "champion": "lich"},
+	{"name": "Ferale", "desc": "Bestie rapide spezzano le linee sicure.", "enemies": ["werewolf", "werewolf_a", "wyvern"], "champion": "wyvern_a"},
+	{"name": "Mirmidone", "desc": "Sciami corazzati chiudono ogni fuga.", "enemies": ["myrm_scout", "myrm_soldier", "myrm_elite"], "champion": "myrm_queen"},
+	{"name": "Draconico", "desc": "Creature alate e draghi controllano la distanza.", "enemies": ["wyvern", "wyvern_a", "dragon_b"], "champion": "dragon"},
+	{"name": "Guerra", "desc": "Bruti e comandanti spingono al combattimento frontale.", "enemies": ["orc", "orc_b", "minotaur"], "champion": "minotaur"},
+]
 
 var _current_map_id: String = EVAL_START_MAP
 var _current_map: Dictionary = {}
@@ -23,6 +33,11 @@ var _last_enemy_count: int = 0
 var _osm_cache: Dictionary = {}
 var _autosave_pending: bool = false
 var _system_ui_connected: bool = false
+var _current_portal_depth: int = 1
+var _current_physical_map_id: String = EVAL_START_MAP
+var _last_loaded_map_id: String = ""
+var _map_reload_streak: int = 0
+var _new_depth_bonus_active: bool = false
 
 func _ready() -> void:
 	randomize()
@@ -159,8 +174,7 @@ func _add_sprite(parent: Node, tex: Texture2D, rect: Rect2, pos: Vector2, z: int
 # ===== MAP LOADER =====
 
 func _load_map(map_id: String) -> void:
-	_current_map_id = map_id
-	_current_map = MAP_REGISTRY.get_map(map_id)
+	_configure_map_progression(map_id)
 	_tileset_type = _current_map.get("tileset", "grassland")
 	print("Loading: %s — %s [%s]" % [map_id, _current_map.title, _tileset_type])
 
@@ -185,7 +199,92 @@ func _load_map(map_id: String) -> void:
 			$GameUI.show_debug_message("[%s] %s" % [_current_map.title, _current_map.desc])
 
 
+func _configure_map_progression(map_id: String) -> void:
+	if map_id == _last_loaded_map_id:
+		_map_reload_streak += 1
+	else:
+		_map_reload_streak = 0
+	_last_loaded_map_id = map_id
+
+	_current_map_id = map_id
+	_current_portal_depth = _get_portal_depth_for_map(map_id)
+	_current_physical_map_id = _get_physical_map_id_for(map_id)
+	if _is_endless_map_id(map_id):
+		_current_map = _make_endless_map_data(_current_portal_depth)
+	else:
+		_current_map = MAP_REGISTRY.get_map(map_id)
+
+	var previous_highest := 1
+	if _player_node:
+		previous_highest = int(_player_node.get("highest_portal_depth"))
+	_new_depth_bonus_active = _current_portal_depth > previous_highest
+	if _player_node and _current_portal_depth > previous_highest:
+		_player_node.set("highest_portal_depth", _current_portal_depth)
+
+
+func _is_endless_map_id(map_id: String) -> bool:
+	return map_id.begins_with(ENDLESS_PORTAL_PREFIX)
+
+
+func _get_endless_map_id(depth: int) -> String:
+	return "%s%d" % [ENDLESS_PORTAL_PREFIX, maxi(ENDLESS_START_DEPTH, depth)]
+
+
+func _parse_endless_depth(map_id: String) -> int:
+	if not _is_endless_map_id(map_id):
+		return 0
+	return maxi(ENDLESS_START_DEPTH, int(map_id.get_slice("_", 2)))
+
+
+func _get_physical_map_id_for(map_id: String) -> String:
+	if not _is_endless_map_id(map_id):
+		return map_id
+	var idx := posmod(_parse_endless_depth(map_id) - ENDLESS_START_DEPTH, ENDLESS_ARENA_IDS.size())
+	return ENDLESS_ARENA_IDS[idx]
+
+
+func _make_endless_map_data(depth: int) -> Dictionary:
+	var base: Dictionary = MAP_REGISTRY.get_map(_get_physical_map_id_for(_get_endless_map_id(depth))).duplicate(true)
+	var variant := _get_endless_variant(depth)
+	base["id"] = _get_endless_map_id(depth)
+	base["title"] = "Portale Infinito %d - %s" % [depth, String(variant.get("name", "Varco"))]
+	base["desc"] = "%s Nemici, XP e bottino scalano con la profondita." % String(variant.get("desc", "Arena riciclata dal Portale."))
+	base["portals"] = [
+		{"target": "procedural6", "pos": Vector2(10, 75), "label": "Procedural City 6"},
+		{"target": _get_endless_map_id(depth + 1), "pos": Vector2(75, 10), "label": "Portale Infinito %d" % (depth + 1)},
+	]
+	return base
+
+
+func _get_endless_variant(depth: int) -> Dictionary:
+	if ENDLESS_VARIANTS.is_empty():
+		return {}
+	var idx := posmod(depth - ENDLESS_START_DEPTH, ENDLESS_VARIANTS.size())
+	return ENDLESS_VARIANTS[idx]
+
+
+func _get_portal_depth_for_map(map_id: String) -> int:
+	if _is_endless_map_id(map_id):
+		return _parse_endless_depth(map_id)
+	var map_depths := {
+		"procedural2": 2,
+		"procedural3": 3,
+		"procedural4": 4,
+		"procedural5": 5,
+		"procedural6": 6,
+		"ruined_city": 4,
+		"postwar_city": 4,
+		"lowpoly_night": 4,
+		"cyberpunk": 5,
+		"tokyo_shibuya": 5,
+	}
+	return int(map_depths.get(map_id, 1))
+
+
 func _story_map_flavor(map_id: String) -> String:
+	if _is_endless_map_id(map_id):
+		var variant := _get_endless_variant(_current_portal_depth)
+		return "Portale Infinito - Profondita %d, %s. Avanzare aumenta rischio, XP e bottino." % [_current_portal_depth, String(variant.get("name", "Varco"))]
 	match map_id:
 		"book_of_the_dead":
 			return "La Biblioteca dei Portali custodisce segreti che uccidono. Ogni libro e un varco."
@@ -1775,6 +1874,8 @@ func _build_player() -> void:
 		p.set("gold", 0)
 
 	_player_node = p
+	if _current_portal_depth > int(p.get("highest_portal_depth")):
+		p.set("highest_portal_depth", _current_portal_depth)
 
 	var cs := CollisionShape2D.new(); cs.name = "CollisionShape2D"
 	var c := CircleShape2D.new(); c.radius = 24.0; cs.shape = c; p.add_child(cs)
@@ -1929,7 +2030,7 @@ var _enemy_types := {
 
 
 func _build_enemies() -> void:
-	match _current_map_id:
+	match _current_physical_map_id:
 		"black_oak_farm":
 			_spawn("skeleton",_iso(12,14)); _spawn("skeleton",_iso(10,16)); _spawn("skeleton",_iso(14,18))
 			_spawn("skeleton",_iso(8,12)); _spawn("skeleton",_iso(16,10))
@@ -2223,25 +2324,53 @@ func _build_enemies() -> void:
 
 		# Connect some grassland portals to dungeons
 		# Already handled via MapRegistry
+	if _is_endless_map_id(_current_map_id):
+		_build_endless_bonus_wave()
+
+
+func _build_endless_bonus_wave() -> void:
+	var variant := _get_endless_variant(_current_portal_depth)
+	var enemies: Array = variant.get("enemies", [])
+	if enemies.is_empty():
+		return
+	var wave_count := clampi(3 + int(floor(float(_current_portal_depth - ENDLESS_START_DEPTH) / 4.0)), 3, 8)
+	for i in range(wave_count):
+		var enemy_type := String(enemies[(i + _current_portal_depth) % enemies.size()])
+		var angle := TAU * float(i) / float(wave_count)
+		var radius := 11.0 + float((i + _current_portal_depth) % 4) * 6.0
+		var tx := clampf(50.0 + cos(angle) * radius, 22.0, 78.0)
+		var ty := clampf(50.0 + sin(angle) * radius, 24.0, 80.0)
+		_spawn(enemy_type, _iso(tx, ty))
+	if _current_portal_depth % 5 == 0:
+		_spawn(String(variant.get("champion", enemies[0])), _iso(50, 50))
 
 
 func _get_endless_depth_for_tier(base_tier: int) -> int:
+	var depth_from_map := maxi(base_tier, _current_portal_depth)
+	if _is_endless_map_id(_current_map_id):
+		return depth_from_map
 	if not _player_node:
-		return base_tier
+		return depth_from_map
 	var player_level := int(_player_node.get("level"))
-	var ascension := int(_player_node.get("ascension_level"))
-	var depth_from_level := base_tier + int(floor(float(maxi(0, player_level - 1)) / 18.0))
-	if player_level > 100:
-		depth_from_level = base_tier + 6 + int(floor(float(ascension) / 4.0))
-	var depth := maxi(base_tier, depth_from_level)
-	if _player_node.has_method("set"):
-		_player_node.set("highest_portal_depth", maxi(int(_player_node.get("highest_portal_depth")), depth))
-	return depth
+	var level_depth := base_tier + int(floor(float(maxi(0, player_level - 1)) / 30.0))
+	return maxi(depth_from_map, mini(level_depth, base_tier + 5))
 
 
 func _get_enemy_scale_for_depth(base_tier: int, depth: int) -> float:
 	var extra_depth := maxi(0, depth - base_tier)
 	return 1.0 + float(extra_depth) * 0.18
+
+
+func _get_reward_multiplier_for_depth(base_tier: int, depth: int) -> float:
+	var extra_depth := maxi(0, depth - base_tier)
+	var multiplier := 1.0 + float(extra_depth) * 0.42
+	if _is_endless_map_id(_current_map_id):
+		multiplier += float(maxi(0, depth - ENDLESS_START_DEPTH)) * 0.12
+	if _new_depth_bonus_active:
+		multiplier *= 1.35
+	if _map_reload_streak > 0:
+		multiplier *= maxf(0.35, 1.0 - float(_map_reload_streak) * 0.25)
+	return multiplier
 
 
 func _default_enemy_attack_style(enemy_type: String) -> String:
@@ -2260,9 +2389,10 @@ func _spawn(type: String, pos: Vector2) -> void:
 	var base_tier: int = c.get("tier", 1)
 	var endless_depth := _get_endless_depth_for_tier(base_tier)
 	var enemy_scale := _get_enemy_scale_for_depth(base_tier, endless_depth)
+	var reward_multiplier := _get_reward_multiplier_for_depth(base_tier, endless_depth)
 	var scaled_hp := maxi(1, int(round(float(c["hp"]) * enemy_scale)))
 	var scaled_damage := maxi(1, int(round(float(c["dmg"]) * (0.75 + enemy_scale * 0.25))))
-	var scaled_xp := maxi(1, int(round(float(c["xp"]) * (0.85 + enemy_scale * 0.35))))
+	var scaled_xp := maxi(1, int(round(float(c["xp"]) * (0.90 + enemy_scale * 0.35) * reward_multiplier)))
 	var e := CharacterBody2D.new()
 	e.name = c["name"]
 	e.position = pos
@@ -2814,7 +2944,9 @@ func _get_portal_type_for_map(map_id: String) -> Dictionary:
 	return PortalTypesClass.get_type_info(PortalTypesClass.Type.WHITE)
 
 func _build_portals() -> void:
-	var portal_list: Array = _current_map.get("portals", [])
+	var portal_list: Array = (_current_map.get("portals", []) as Array).duplicate(true)
+	if _current_map_id == "procedural6":
+		portal_list.append({"target": _get_endless_map_id(ENDLESS_START_DEPTH), "pos": Vector2(50, 90), "label": "Portale Infinito %d" % ENDLESS_START_DEPTH})
 	for pdata in portal_list:
 		var pos := _iso(pdata.pos.x, pdata.pos.y)
 		var target: String = pdata.target
@@ -3102,6 +3234,14 @@ func _build_ui() -> void:
 	lvl.add_theme_constant_override("outline_size", 2)
 	lvl.add_theme_font_size_override("font_size", 13)
 	vb.add_child(lvl)
+
+	var depth_label := Label.new(); depth_label.name = "PortalDepthLabel"
+	depth_label.text = "Profondita Portale %d" % _current_portal_depth
+	depth_label.add_theme_color_override("font_color", Color(0.78, 0.66, 1.0))
+	depth_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.70))
+	depth_label.add_theme_constant_override("outline_size", 2)
+	depth_label.add_theme_font_size_override("font_size", 11)
+	vb.add_child(depth_label)
 
 	# Player health bar
 	var phb := ProgressBar.new(); phb.name = "HealthBar"
@@ -3696,7 +3836,7 @@ func _update_minimap() -> void:
 		if child is CharacterBody2D and child.has_method("is_dead") and not child.is_dead() and child != _player_node:
 			enemy_count += 1
 	
-	mml.text = "Nemici: %d | Oro: %d" % [enemy_count, _player_node.gold if _player_node else 0]
+	mml.text = "Nemici: %d | Oro: %d | Prof. %d" % [enemy_count, _player_node.gold if _player_node else 0, _current_portal_depth]
 
 
 func _input(event: InputEvent) -> void:
