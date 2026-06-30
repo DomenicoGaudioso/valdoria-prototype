@@ -6,6 +6,10 @@ const LOCAL_WORLD = preload("res://scenes/real_world/LocalGltfWorld.tscn")
 
 func _initialize() -> void:
 	var failed: Array[String] = []
+	var save_manager := root.get_node_or_null("SaveManager")
+	if save_manager:
+		save_manager.call("set_current_account", "qa_game_over_restart")
+		save_manager.call("delete_save", "qa_game_over_restart")
 	await _check_classic_game_over(failed)
 	await _check_local_3d_game_over(failed)
 
@@ -23,12 +27,18 @@ func _check_classic_game_over(failed: Array[String]) -> void:
 	root.add_child(world)
 	await process_frame
 	await process_frame
+	if world.has_method("_load_map"):
+		world.call("_load_map", "black_oak_city")
+		for _i in range(6):
+			await process_frame
 
 	var player := world.get_node_or_null("Player")
 	if player == null:
 		failed.append("classic missing Player")
 	else:
-		player.call("take_damage", 9999, null)
+		player.call("take_damage", 999999, null)
+		for _i in range(4):
+			await process_frame
 
 	var ui := world.get_node_or_null("GameUI")
 	_check_overlay(ui, "classic", failed)

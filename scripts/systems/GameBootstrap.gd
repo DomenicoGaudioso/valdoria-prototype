@@ -506,6 +506,8 @@ func _build_world() -> void:
 		if _has_city_vector_source():
 			_add_real_city_vector_layer()
 		_add_city_landmarks()
+	else:
+		_add_wilderness_map_details()
 
 
 func _build_scene_atmosphere() -> void:
@@ -524,6 +526,7 @@ func _build_scene_atmosphere() -> void:
 		mood.get("top_vignette", Color(0.02, 0.01, 0.04, 0.22)),
 		mood.get("bottom_vignette", Color(0.01, 0.0, 0.02, 0.34))
 	)
+	_add_horizon_silhouette(mood.get("horizon", Color(0.02, 0.03, 0.05, 0.28)))
 
 
 func _get_scene_mood() -> Dictionary:
@@ -535,6 +538,7 @@ func _get_scene_mood() -> Dictionary:
 			"mote_count": 30,
 			"top_vignette": Color(0.03, 0.0, 0.05, 0.34),
 			"bottom_vignette": Color(0.0, 0.0, 0.0, 0.46),
+			"horizon": Color(0.08, 0.02, 0.12, 0.34),
 		}
 	if _tileset_type == "snowplains":
 		return {
@@ -543,6 +547,7 @@ func _get_scene_mood() -> Dictionary:
 			"mote_count": 54,
 			"top_vignette": Color(0.02, 0.08, 0.14, 0.24),
 			"bottom_vignette": Color(0.01, 0.03, 0.07, 0.30),
+			"horizon": Color(0.40, 0.64, 0.78, 0.18),
 		}
 	if _current_map_id in ["cyberpunk", "lowpoly_night"] or style in ["urban_3d", "dense_3d"]:
 		return {
@@ -551,6 +556,7 @@ func _get_scene_mood() -> Dictionary:
 			"mote_count": 48,
 			"top_vignette": Color(0.01, 0.03, 0.09, 0.30),
 			"bottom_vignette": Color(0.01, 0.0, 0.04, 0.38),
+			"horizon": Color(0.02, 0.18, 0.28, 0.34),
 		}
 	if style in ["ancient", "water_city", "gothic"]:
 		return {
@@ -559,6 +565,7 @@ func _get_scene_mood() -> Dictionary:
 			"mote_count": 36,
 			"top_vignette": Color(0.08, 0.04, 0.01, 0.20),
 			"bottom_vignette": Color(0.04, 0.02, 0.0, 0.32),
+			"horizon": Color(0.24, 0.14, 0.08, 0.22),
 		}
 	return {
 		"canvas": Color(0.84, 0.90, 0.86, 1.0),
@@ -566,6 +573,7 @@ func _get_scene_mood() -> Dictionary:
 		"mote_count": 40,
 		"top_vignette": Color(0.02, 0.04, 0.03, 0.20),
 		"bottom_vignette": Color(0.0, 0.01, 0.0, 0.32),
+		"horizon": Color(0.04, 0.10, 0.06, 0.18),
 	}
 
 
@@ -615,6 +623,35 @@ func _add_screen_vignette(top_color: Color, bottom_color: Color) -> void:
 		root.add_child(edge)
 
 
+func _add_horizon_silhouette(color: Color) -> void:
+	if not _world_node or not _current_map.has("data"):
+		return
+	var data: Dictionary = _current_map.data.get_data()
+	var width := float(data.get("width", 80))
+	var start := _iso(0.0, 0.0) + Vector2(20.0, -210.0)
+	var end := _iso(width, 0.0) + Vector2(180.0, -210.0)
+	var baseline := maxf(start.y, end.y)
+	var layer := Node2D.new()
+	layer.name = "MapHorizonSilhouette"
+	layer.z_index = -24
+	_world_node.add_child(layer)
+
+	var points := PackedVector2Array()
+	points.append(Vector2(start.x - 180.0, baseline + 96.0))
+	for i in range(18):
+		var t := float(i) / 17.0
+		var x := lerpf(start.x - 120.0, end.x + 120.0, t)
+		var h := 32.0 + float((i * 37 + _current_map_id.length() * 11) % 78)
+		points.append(Vector2(x, baseline - h))
+	points.append(Vector2(end.x + 180.0, baseline + 96.0))
+
+	var silhouette := Polygon2D.new()
+	silhouette.name = "HorizonMass"
+	silhouette.polygon = points
+	silhouette.color = color
+	layer.add_child(silhouette)
+
+
 func _add_ambient_motes(color: Color, amount: int) -> void:
 	if not _world_node or not _current_map.has("data"):
 		return
@@ -653,6 +690,64 @@ func _add_ambient_motes(color: Color, amount: int) -> void:
 				mote.position = start_pos
 				mote.modulate.a = start_alpha
 		)
+
+
+func _add_wilderness_map_details() -> void:
+	if not _world_node or not _current_map.has("data"):
+		return
+	var data: Dictionary = _current_map.data.get_data()
+	var width := float(data.get("width", 80))
+	var height := float(data.get("height", 80))
+	var layer := Node2D.new()
+	layer.name = "MapGroundDetails"
+	layer.z_index = -10
+	_world_node.add_child(layer)
+
+	var count := 70
+	if _tileset_type == "dungeon":
+		count = 42
+	elif _is_endless_map_id(_current_map_id):
+		count = 92
+	for i in range(count):
+		var p := _iso(randf_range(4.0, width - 4.0), randf_range(4.0, height - 4.0)) + Vector2(96.0, 52.0)
+		var shard := Polygon2D.new()
+		shard.name = "GroundDetail"
+		var sx := randf_range(8.0, 22.0)
+		var sy := randf_range(2.0, 6.0)
+		shard.polygon = PackedVector2Array([
+			Vector2(-sx, 0.0), Vector2(0.0, -sy), Vector2(sx, 0.0), Vector2(0.0, sy),
+		])
+		shard.position = p
+		shard.rotation = randf_range(-0.35, 0.35)
+		shard.color = _ground_detail_color(i)
+		layer.add_child(shard)
+
+	if _is_endless_map_id(_current_map_id):
+		_add_endless_rift_scars(layer, width, height)
+
+
+func _ground_detail_color(index: int) -> Color:
+	if _tileset_type == "dungeon":
+		return Color(0.20, 0.19, 0.24, 0.38)
+	if _tileset_type == "snowplains":
+		return Color(0.72, 0.86, 1.0, 0.28)
+	if _current_map_id in ["ruined_city", "postwar_city"]:
+		return Color(0.25, 0.22, 0.19, 0.34)
+	var alpha := 0.18 + float(index % 4) * 0.035
+	return Color(0.18, 0.30, 0.17, alpha)
+
+
+func _add_endless_rift_scars(parent: Node2D, width: float, height: float) -> void:
+	for i in range(7):
+		var scar := Line2D.new()
+		scar.name = "EndlessRiftScar"
+		scar.width = 2.0 + float(i % 3)
+		scar.default_color = Color(0.42, 0.20, 1.0, 0.34)
+		scar.z_index = -8
+		var origin := _iso(randf_range(12.0, width - 12.0), randf_range(10.0, height - 10.0)) + Vector2(96.0, 46.0)
+		for j in range(5):
+			scar.add_point(origin + Vector2(float(j) * randf_range(14.0, 26.0), sin(float(j) * 1.7 + float(i)) * 18.0))
+		parent.add_child(scar)
 
 
 func _is_real_city() -> bool:
@@ -1172,6 +1267,7 @@ func _add_osm_water(points: Array[Vector2], tags: Dictionary, collision_body: St
 		poly.color = _city_water_color()
 		poly.z_index = -5
 		_world_node.add_child(poly)
+		_add_water_highlight(polygon_points, -4)
 		_add_osm_collision(collision_body, polygon_points, 32)
 		return true
 	var line_points: Array[Vector2] = _simplify_points(points, 80)
@@ -1187,6 +1283,7 @@ func _add_osm_water(points: Array[Vector2], tags: Dictionary, collision_body: St
 	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	line.end_cap_mode = Line2D.LINE_CAP_ROUND
 	_world_node.add_child(line)
+	_add_waterline_glint(line_points, line.width, -3)
 	return true
 
 
@@ -1233,7 +1330,72 @@ func _add_osm_road(points: Array[Vector2], tags: Dictionary) -> bool:
 	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	line.end_cap_mode = Line2D.LINE_CAP_ROUND
 	_world_node.add_child(line)
+	_add_road_center_detail(line_points, highway)
 	return true
+
+
+func _add_water_highlight(points: Array[Vector2], z: int) -> void:
+	if points.size() < 3:
+		return
+	var center := _points_center(points)
+	var ring := Line2D.new()
+	ring.name = "OSMWaterHighlight"
+	ring.width = 2.0
+	ring.default_color = Color(0.46, 0.88, 1.0, 0.24)
+	ring.z_index = z
+	for i in range(points.size()):
+		var p := points[i]
+		if i % 2 == 0:
+			ring.add_point(center.lerp(p, 0.82))
+	if ring.get_point_count() >= 3:
+		ring.closed = true
+		_world_node.add_child(ring)
+	else:
+		ring.queue_free()
+
+
+func _add_waterline_glint(points: Array[Vector2], width: float, z: int) -> void:
+	if points.size() < 2:
+		return
+	var glint := Line2D.new()
+	glint.name = "OSMWaterGlint"
+	glint.points = _packed_points(points)
+	glint.width = maxf(2.0, width * 0.22)
+	glint.default_color = Color(0.56, 0.92, 1.0, 0.32)
+	glint.z_index = z
+	glint.joint_mode = Line2D.LINE_JOINT_ROUND
+	glint.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	glint.end_cap_mode = Line2D.LINE_CAP_ROUND
+	_world_node.add_child(glint)
+
+
+func _add_road_center_detail(points: Array[Vector2], highway: String) -> void:
+	if points.size() < 2 or highway in ["footway", "path", "steps"]:
+		return
+	var line := Line2D.new()
+	line.name = "OSMRoadCenterLine"
+	line.points = _packed_points(points)
+	line.width = 1.4 if highway in ["residential", "service", "living_street"] else 2.2
+	line.default_color = Color(0.92, 0.82, 0.52, 0.32) if highway in ["primary", "secondary", "tertiary"] else Color(0.82, 0.82, 0.78, 0.22)
+	line.z_index = -1
+	line.joint_mode = Line2D.LINE_JOINT_ROUND
+	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	line.end_cap_mode = Line2D.LINE_CAP_ROUND
+	_world_node.add_child(line)
+
+
+func _add_roof_highlight(points: Array[Vector2], z: int, important: bool) -> void:
+	if points.size() < 3:
+		return
+	var outline := Line2D.new()
+	outline.name = "OSMRoofHighlight"
+	outline.width = 2.4 if important else 1.4
+	outline.default_color = Color(1.0, 0.92, 0.68, 0.24 if not important else 0.38)
+	outline.z_index = z
+	for point in points:
+		outline.add_point(point)
+	outline.add_point(points[0])
+	_world_node.add_child(outline)
 
 
 func _add_osm_building(element: Dictionary, points: Array[Vector2], collision_body: StaticBody2D, important: bool) -> bool:
@@ -1284,6 +1446,7 @@ func _add_osm_building(element: Dictionary, points: Array[Vector2], collision_bo
 	roof.color = _city_roof_color(style) if not important else _important_roof_color(style)
 	roof.z_index = z
 	_world_node.add_child(roof)
+	_add_roof_highlight(top_points, z + 1, important)
 
 	var outline_points: Array[Vector2] = top_points.duplicate()
 	if not outline_points.is_empty():
@@ -2366,6 +2529,11 @@ func _get_reward_multiplier_for_depth(base_tier: int, depth: int) -> float:
 	var multiplier := 1.0 + float(extra_depth) * 0.42
 	if _is_endless_map_id(_current_map_id):
 		multiplier += float(maxi(0, depth - ENDLESS_START_DEPTH)) * 0.12
+		if _player_node:
+			var player_level := int(_player_node.get("level"))
+			var expected_depth := ENDLESS_START_DEPTH + int(floor(float(maxi(0, player_level - 100)) / 2.0))
+			var stale_depth_gap := maxi(0, expected_depth - depth)
+			multiplier *= 1.0 + minf(float(stale_depth_gap) * 0.32, 10.0)
 	if _new_depth_bonus_active:
 		multiplier *= 1.35
 	if _map_reload_streak > 0:

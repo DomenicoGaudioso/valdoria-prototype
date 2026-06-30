@@ -1,15 +1,15 @@
 PLAYTEST_RESULT_BEGIN
-elapsed_sec=68.81
+elapsed_sec=61.08
 visited=black_oak_city, roma_centro, venezia_rialto, parigi_cite, berlin_mitte_3d, tokyo_shibuya, cyberpunk, lowpoly_night, postwar_city, ruined_city, procedural2, procedural3, procedural4, procedural5, procedural6, endless_portal_7, endless_portal_8, endless_portal_9, endless_portal_10, endless_portal_11, endless_portal_12, endless_portal_13, endless_portal_14, endless_portal_15, endless_portal_16, endless_portal_17, endless_portal_18, endless_portal_19, endless_portal_20, endless_portal_21, endless_portal_22, endless_portal_23, endless_portal_24, endless_portal_25, endless_portal_26, endless_portal_27, endless_portal_28, endless_portal_29, endless_portal_30
 most_advanced_map=endless_portal_30
 kills=149
 level=118
-xp=88537/336697
+xp=105179/336697
 ascension=18
 highest_portal_depth=30
-gold=55407
+gold=63941
 hp=2919/2919 dead=false
-attack=357 defense=117 speed=992 agility=118
-best_item=Rapido Runico Affilato Passi Abisso +8 [infinite/National] score=1484
+attack=357 defense=117 speed=1001 agility=118
+best_item=Runico Lama Eclisse +8 del Varco dell'Ascensione [infinite/National] score=1630
 failures=NONE
 PLAYTEST_RESULT_END

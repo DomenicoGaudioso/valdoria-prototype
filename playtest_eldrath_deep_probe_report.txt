@@ -1,0 +1,15 @@
+depth=30 enemies=19 killed=5 max_enemy_hp=2200 avg_xp=41306 projected_kills_to_level=60 player_attack=509 speed=1102 best_score=-999999
+depth=50 enemies=19 killed=5 max_enemy_hp=3640 avg_xp=36310 projected_kills_to_level=68 player_attack=509 speed=1102 best_score=-999999
+depth=75 enemies=19 killed=5 max_enemy_hp=5440 avg_xp=22584 projected_kills_to_level=109 player_attack=509 speed=1102 best_score=-999999
+depth=100 enemies=19 killed=5 max_enemy_hp=7240 avg_xp=41084 projected_kills_to_level=60 player_attack=509 speed=1102 best_score=-999999
+depth=150 enemies=19 killed=5 max_enemy_hp=10840 avg_xp=84127 projected_kills_to_level=30 player_attack=509 speed=1102 best_score=-999999
+depth=200 enemies=19 killed=5 max_enemy_hp=14440 avg_xp=153871 projected_kills_to_level=16 player_attack=509 speed=1102 best_score=-999999
+DEEP_ENDLESS_PROBE_BEGIN
+elapsed_sec=16.46
+level=200 xp=1090205/2447377 ascension=100 highest_portal_depth=200
+hp=4395/4395 attack=509 defense=199 speed=1102 agility=199 gold=610540
+kills=30
+best_item= score=-999999
+warnings=depth 75 needs about 109 kills for one level
+failures=NONE
+DEEP_ENDLESS_PROBE_END

@@ -59,9 +59,10 @@ func get_save_path(account_id: String = "") -> String:
 
 
 func has_save(account_id: String = "") -> bool:
-	if FileAccess.file_exists(get_save_path(account_id)):
+	var target_account := sanitize_account_id(account_id if not account_id.is_empty() else current_account_id)
+	if FileAccess.file_exists(get_save_path(target_account)):
 		return true
-	return FileAccess.file_exists(LEGACY_SAVE_PATH)
+	return target_account == DEFAULT_ACCOUNT_ID and FileAccess.file_exists(LEGACY_SAVE_PATH)
 
 
 func save_game(player, map_id: String) -> void:
@@ -120,8 +121,9 @@ func save_game(player, map_id: String) -> void:
 
 
 func load_game(account_id: String = "") -> Dictionary:
-	var save_path := get_save_path(account_id)
-	if not FileAccess.file_exists(save_path) and FileAccess.file_exists(LEGACY_SAVE_PATH):
+	var target_account := sanitize_account_id(account_id if not account_id.is_empty() else current_account_id)
+	var save_path := get_save_path(target_account)
+	if not FileAccess.file_exists(save_path) and target_account == DEFAULT_ACCOUNT_ID and FileAccess.file_exists(LEGACY_SAVE_PATH):
 		save_path = LEGACY_SAVE_PATH
 	if not FileAccess.file_exists(save_path):
 		return {}
@@ -130,7 +132,7 @@ func load_game(account_id: String = "") -> Dictionary:
 	if data.is_empty():
 		return {}
 
-	if data.has("account_id"):
+	if account_id.is_empty() and data.has("account_id"):
 		current_account_id = sanitize_account_id(str(data.get("account_id", current_account_id)))
 	game_loaded.emit(current_account_id, save_path)
 	print("Game loaded from: " + save_path)

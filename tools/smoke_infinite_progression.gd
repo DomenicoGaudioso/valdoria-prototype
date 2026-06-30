@@ -94,6 +94,50 @@ func _check_endless_rewards_and_save(failed: Array[String]) -> void:
 		if int(player.get("xp")) <= 0 and int(player.get("level")) <= 118:
 			failed.append("projected depth reward did not move player progression")
 
+	player.set("level", 200)
+	player.set("xp", 0)
+	player.set("xp_to_next_level", int(player.call("_calculate_next_xp_required", 200, 0)))
+	player.set("ascension_level", 100)
+	player.set("ascension_points", 100)
+	world.call("_load_map", "procedural6")
+	for _i in range(10):
+		await process_frame
+	player = world.get_node_or_null("Player")
+	if player == null:
+		failed.append("missing Player after catch-up staging reload")
+		world.queue_free()
+		await process_frame
+		return
+	player.set("level", 200)
+	player.set("xp", 0)
+	player.set("xp_to_next_level", int(player.call("_calculate_next_xp_required", 200, 0)))
+	player.set("ascension_level", 100)
+	player.set("ascension_points", 100)
+	world.call("_load_map", "endless_portal_30")
+	for _i in range(10):
+		await process_frame
+	player = world.get_node_or_null("Player")
+	if player == null:
+		failed.append("missing Player after level-200 depth-30 reload")
+		world.queue_free()
+		await process_frame
+		return
+	player.set("level", 200)
+	player.set("xp_to_next_level", int(player.call("_calculate_next_xp_required", 200, 0)))
+	player.set("ascension_level", 100)
+	player.set("ascension_points", 100)
+	var catchup_enemies := _live_enemies(world)
+	if catchup_enemies.is_empty():
+		failed.append("level-200 depth-30 catch-up spawned no enemies")
+	else:
+		var catchup_total_xp := 0
+		for enemy in catchup_enemies:
+			catchup_total_xp += int(enemy.get("xp_value"))
+		var catchup_avg_xp := int(round(float(catchup_total_xp) / float(catchup_enemies.size())))
+		var projected_kills_to_level := int(ceil(float(player.get("xp_to_next_level")) / maxf(float(catchup_avg_xp), 1.0)))
+		if projected_kills_to_level > 120:
+			failed.append("level-200 depth-30 catch-up still too slow: %d kills" % projected_kills_to_level)
+
 	if int(player.get("highest_portal_depth")) < 30:
 		failed.append("highest_portal_depth did not record real endless map depth")
 
@@ -129,7 +173,7 @@ func _check_endless_rewards_and_save(failed: Array[String]) -> void:
 	await process_frame
 	if save_manager:
 		var data: Dictionary = save_manager.call("load_game")
-		if int(data.get("ascension_level", -1)) != 18:
+		if int(data.get("ascension_level", -1)) != int(player.get("ascension_level")):
 			failed.append("save/load lost ascension_level")
 		if int(data.get("highest_portal_depth", -1)) < 30:
 			failed.append("save/load lost highest_portal_depth")

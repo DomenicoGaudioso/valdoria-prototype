@@ -610,7 +610,8 @@ func _recalc_equip_stats() -> void:
 	current_hp = min(current_hp, max_hp)
 	defense = base_defense + def_bonus
 	agility = base_agility + agi_bonus
-	move_speed = base_speed + spd_bonus + float(agility) * 2.0
+	var raw_speed := base_speed + spd_bonus + float(agility) * 2.0
+	move_speed = _soft_cap_move_speed(raw_speed)
 	health_changed.emit(current_hp, max_hp)
 
 
@@ -627,6 +628,12 @@ func _apply_item_effects(item, activate: bool) -> void:
 func _item_get(item, property_name: String, default_value = null):
 	var value = item.get(property_name)
 	return default_value if value == null else value
+
+
+func _soft_cap_move_speed(raw_speed: float) -> float:
+	if raw_speed <= 950.0:
+		return raw_speed
+	return 950.0 + sqrt(raw_speed - 950.0) * 8.0
 
 
 func _rebuild_equipment_effects() -> void:
