@@ -531,50 +531,169 @@ func _build_scene_atmosphere() -> void:
 
 func _get_scene_mood() -> Dictionary:
 	var style: String = _current_map.get("city_style", "")
+	var profile: Dictionary = _get_map_visual_profile()
 	if _tileset_type == "dungeon":
 		return {
-			"canvas": Color(0.70, 0.73, 0.82, 1.0),
-			"mote_color": Color(0.76, 0.38, 1.0, 0.34),
+			"canvas": Color(0.70, 0.73, 0.82, 1.0).lerp(profile.get("canvas_tint", Color(0.70, 0.73, 0.82, 1.0)), 0.25),
+			"mote_color": profile.get("mote_color", Color(0.76, 0.38, 1.0, 0.34)),
 			"mote_count": 30,
 			"top_vignette": Color(0.03, 0.0, 0.05, 0.34),
 			"bottom_vignette": Color(0.0, 0.0, 0.0, 0.46),
-			"horizon": Color(0.08, 0.02, 0.12, 0.34),
+			"horizon": profile.get("horizon_color", Color(0.08, 0.02, 0.12, 0.34)),
 		}
 	if _tileset_type == "snowplains":
 		return {
 			"canvas": Color(0.82, 0.91, 1.0, 1.0),
-			"mote_color": Color(0.78, 0.94, 1.0, 0.30),
+			"mote_color": profile.get("mote_color", Color(0.78, 0.94, 1.0, 0.30)),
 			"mote_count": 54,
 			"top_vignette": Color(0.02, 0.08, 0.14, 0.24),
 			"bottom_vignette": Color(0.01, 0.03, 0.07, 0.30),
-			"horizon": Color(0.40, 0.64, 0.78, 0.18),
+			"horizon": profile.get("horizon_color", Color(0.40, 0.64, 0.78, 0.18)),
 		}
 	if _current_map_id in ["cyberpunk", "lowpoly_night"] or style in ["urban_3d", "dense_3d"]:
 		return {
 			"canvas": Color(0.80, 0.88, 1.0, 1.0),
-			"mote_color": Color(0.22, 0.92, 1.0, 0.30),
+			"mote_color": profile.get("mote_color", Color(0.22, 0.92, 1.0, 0.30)),
 			"mote_count": 48,
 			"top_vignette": Color(0.01, 0.03, 0.09, 0.30),
 			"bottom_vignette": Color(0.01, 0.0, 0.04, 0.38),
-			"horizon": Color(0.02, 0.18, 0.28, 0.34),
+			"horizon": profile.get("horizon_color", Color(0.02, 0.18, 0.28, 0.34)),
 		}
 	if style in ["ancient", "water_city", "gothic"]:
 		return {
 			"canvas": Color(0.88, 0.86, 0.78, 1.0),
-			"mote_color": Color(1.0, 0.72, 0.34, 0.24),
+			"mote_color": profile.get("mote_color", Color(1.0, 0.72, 0.34, 0.24)),
 			"mote_count": 36,
 			"top_vignette": Color(0.08, 0.04, 0.01, 0.20),
 			"bottom_vignette": Color(0.04, 0.02, 0.0, 0.32),
-			"horizon": Color(0.24, 0.14, 0.08, 0.22),
+			"horizon": profile.get("horizon_color", Color(0.24, 0.14, 0.08, 0.22)),
 		}
 	return {
 		"canvas": Color(0.84, 0.90, 0.86, 1.0),
-		"mote_color": Color(0.64, 0.90, 0.62, 0.22),
+		"mote_color": profile.get("mote_color", Color(0.64, 0.90, 0.62, 0.22)),
 		"mote_count": 40,
 		"top_vignette": Color(0.02, 0.04, 0.03, 0.20),
 		"bottom_vignette": Color(0.0, 0.01, 0.0, 0.32),
-		"horizon": Color(0.04, 0.10, 0.06, 0.18),
+		"horizon": profile.get("horizon_color", Color(0.04, 0.10, 0.06, 0.18)),
 	}
+
+
+func _get_map_visual_profile() -> Dictionary:
+	var style: String = _current_map.get("city_style", "")
+	var profile := {
+		"family": "grassland",
+		"identity": Color(0.38, 0.62, 0.32, 1.0),
+		"accent": Color(0.86, 0.78, 0.48, 1.0),
+		"secondary": Color(0.28, 0.44, 0.24, 1.0),
+		"canvas_tint": Color(0.84, 0.90, 0.86, 1.0),
+		"horizon_color": Color(0.04, 0.10, 0.06, 0.20),
+		"mote_color": Color(0.64, 0.90, 0.62, 0.22),
+		"ground_detail_count": 86,
+		"ground_alpha": 0.24,
+		"crack_density": 0.16,
+		"rune_density": 0.08,
+		"park_mark_density": 0.55,
+		"water_edge": 0.32,
+		"road_detail": 0.44,
+		"roof_variation": 0.10,
+		"window_density": 0.55,
+		"rift_density": 0.42,
+		"rift_intensity": 0.35,
+		"portal_sparks": 5,
+	}
+	if _current_map_id in ["ruined_city", "postwar_city"] or _current_map_id.contains("stormrock"):
+		profile.merge({
+			"family": "ruined",
+			"identity": Color(0.58, 0.48, 0.38, 1.0),
+			"accent": Color(0.86, 0.58, 0.32, 1.0),
+			"secondary": Color(0.30, 0.27, 0.25, 1.0),
+			"canvas_tint": Color(0.82, 0.80, 0.74, 1.0),
+			"horizon_color": Color(0.12, 0.10, 0.09, 0.28),
+			"mote_color": Color(0.76, 0.62, 0.42, 0.24),
+			"ground_detail_count": 118,
+			"ground_alpha": 0.32,
+			"crack_density": 0.72,
+			"rune_density": 0.05,
+		}, true)
+	if _current_map_id in ["cyberpunk", "lowpoly_night"]:
+		profile.merge({
+			"family": "cyber",
+			"identity": Color(0.20, 0.92, 1.0, 1.0),
+			"accent": Color(0.92, 0.32, 1.0, 1.0),
+			"secondary": Color(0.18, 0.28, 0.42, 1.0),
+			"canvas_tint": Color(0.78, 0.88, 1.0, 1.0),
+			"horizon_color": Color(0.02, 0.18, 0.28, 0.34),
+			"mote_color": Color(0.22, 0.92, 1.0, 0.30),
+			"ground_detail_count": 92,
+			"ground_alpha": 0.28,
+			"crack_density": 0.30,
+			"road_detail": 0.92,
+			"window_density": 0.88,
+		}, true)
+	if _is_real_city():
+		match _current_map_id:
+			"roma_centro":
+				profile.merge({"family": "roman", "identity": Color(0.90, 0.60, 0.34, 1.0), "accent": Color(1.0, 0.78, 0.48, 1.0), "secondary": Color(0.48, 0.36, 0.25, 1.0), "horizon_color": Color(0.24, 0.14, 0.08, 0.24), "road_detail": 0.50, "roof_variation": 0.16}, true)
+			"venezia_rialto":
+				profile.merge({"family": "venice", "identity": Color(0.18, 0.82, 1.0, 1.0), "accent": Color(0.96, 0.72, 0.40, 1.0), "secondary": Color(0.22, 0.48, 0.50, 1.0), "horizon_color": Color(0.05, 0.22, 0.28, 0.27), "water_edge": 0.78, "park_mark_density": 0.38}, true)
+			"parigi_cite":
+				profile.merge({"family": "paris", "identity": Color(0.74, 0.68, 0.92, 1.0), "accent": Color(0.92, 0.82, 0.56, 1.0), "secondary": Color(0.34, 0.34, 0.42, 1.0), "horizon_color": Color(0.14, 0.12, 0.20, 0.26), "roof_variation": 0.13}, true)
+			"berlin_mitte_3d":
+				profile.merge({"family": "berlin", "identity": Color(0.76, 0.84, 0.92, 1.0), "accent": Color(0.96, 0.76, 0.38, 1.0), "secondary": Color(0.30, 0.34, 0.38, 1.0), "horizon_color": Color(0.10, 0.12, 0.15, 0.28), "road_detail": 0.62}, true)
+			"tokyo_shibuya":
+				profile.merge({"family": "tokyo", "identity": Color(0.28, 0.95, 1.0, 1.0), "accent": Color(1.0, 0.34, 0.95, 1.0), "secondary": Color(0.20, 0.28, 0.48, 1.0), "horizon_color": Color(0.02, 0.16, 0.27, 0.36), "road_detail": 0.95, "window_density": 0.94, "roof_variation": 0.18}, true)
+		if style == "ancient":
+			profile["canvas_tint"] = Color(0.88, 0.86, 0.78, 1.0)
+		elif style == "water_city":
+			profile["canvas_tint"] = Color(0.80, 0.90, 0.88, 1.0)
+		elif style in ["urban_3d", "dense_3d"]:
+			profile["canvas_tint"] = Color(0.80, 0.88, 1.0, 1.0)
+	if _is_endless_map_id(_current_map_id):
+		var variant: Dictionary = _get_endless_variant(_current_portal_depth)
+		var name: String = String(variant.get("name", "")).to_lower()
+		var depth_factor: float = clamp(float(_current_portal_depth - ENDLESS_START_DEPTH) / 10.0, 0.0, 1.0)
+		profile["family"] = "endless_" + name
+		profile["ground_detail_count"] = clampi(96 + int(depth_factor * 32.0), 96, 132)
+		profile["rift_density"] = 0.52 + depth_factor * 0.36
+		profile["rift_intensity"] = 0.42 + depth_factor * 0.42
+		profile["portal_sparks"] = 6 + int(depth_factor * 5.0)
+		if name.contains("eclisse"):
+			profile.merge({"identity": Color(0.72, 0.36, 1.0, 1.0), "accent": Color(0.40, 0.24, 0.92, 1.0), "secondary": Color(0.12, 0.08, 0.20, 1.0), "mote_color": Color(0.72, 0.36, 1.0, 0.34)}, true)
+		elif name.contains("ferale"):
+			profile.merge({"identity": Color(0.46, 0.88, 0.34, 1.0), "accent": Color(0.86, 0.58, 0.22, 1.0), "secondary": Color(0.16, 0.32, 0.16, 1.0), "mote_color": Color(0.54, 0.94, 0.38, 0.28)}, true)
+		elif name.contains("mirmidone"):
+			profile.merge({"identity": Color(0.78, 0.64, 0.30, 1.0), "accent": Color(0.24, 0.82, 0.82, 1.0), "secondary": Color(0.24, 0.22, 0.18, 1.0), "mote_color": Color(0.78, 0.70, 0.42, 0.30)}, true)
+		elif name.contains("draconico"):
+			profile.merge({"identity": Color(1.0, 0.44, 0.20, 1.0), "accent": Color(1.0, 0.80, 0.26, 1.0), "secondary": Color(0.34, 0.10, 0.06, 1.0), "mote_color": Color(1.0, 0.45, 0.22, 0.30)}, true)
+		elif name.contains("guerra"):
+			profile.merge({"identity": Color(0.76, 0.18, 0.16, 1.0), "accent": Color(0.72, 0.70, 0.64, 1.0), "secondary": Color(0.18, 0.18, 0.18, 1.0), "mote_color": Color(0.68, 0.54, 0.46, 0.24)}, true)
+		var endless_secondary: Color = profile.get("secondary", Color(0.12, 0.08, 0.20, 1.0))
+		profile["horizon_color"] = Color(endless_secondary.r, endless_secondary.g, endless_secondary.b, 0.34 + depth_factor * 0.12)
+	return profile
+
+
+func _profile_color(key: String, fallback: Color) -> Color:
+	var value: Variant = _get_map_visual_profile().get(key, fallback)
+	return value if typeof(value) == TYPE_COLOR else fallback
+
+
+func _profile_float(key: String, fallback: float) -> float:
+	var value: Variant = _get_map_visual_profile().get(key, fallback)
+	if typeof(value) == TYPE_FLOAT or typeof(value) == TYPE_INT:
+		return float(value)
+	return fallback
+
+
+func _stable_map_noise(key: String, salt: String = "") -> float:
+	var h: int = abs(("%s:%s:%s:%d" % [_current_map_id, key, salt, _current_portal_depth]).hash())
+	return float(h % 10000) / 10000.0
+
+
+func _tinted_color(base: Color, tint: Color, amount: float, alpha_override: float = -1.0) -> Color:
+	var c := base.lerp(tint, clamp(amount, 0.0, 1.0))
+	if alpha_override >= 0.0:
+		c.a = alpha_override
+	return c
 
 
 func _add_screen_vignette(top_color: Color, bottom_color: Color) -> void:
@@ -626,6 +745,7 @@ func _add_screen_vignette(top_color: Color, bottom_color: Color) -> void:
 func _add_horizon_silhouette(color: Color) -> void:
 	if not _world_node or not _current_map.has("data"):
 		return
+	var profile: Dictionary = _get_map_visual_profile()
 	var data: Dictionary = _current_map.data.get_data()
 	var width := float(data.get("width", 80))
 	var start := _iso(0.0, 0.0) + Vector2(20.0, -210.0)
@@ -648,8 +768,42 @@ func _add_horizon_silhouette(color: Color) -> void:
 	var silhouette := Polygon2D.new()
 	silhouette.name = "HorizonMass"
 	silhouette.polygon = points
-	silhouette.color = color
+	silhouette.color = color.lerp(profile.get("secondary", color), 0.18)
 	layer.add_child(silhouette)
+
+	var family := String(profile.get("family", "grassland"))
+	var accent: Color = profile.get("identity", Color(0.38, 0.62, 0.32, 1.0))
+	var skyline_count := 6
+	if family in ["cyber", "tokyo", "berlin"]:
+		skyline_count = 10
+	elif family.begins_with("endless"):
+		skyline_count = 8
+	elif family == "grassland":
+		skyline_count = 5
+	for i in range(skyline_count):
+		var t := (float(i) + 0.5) / float(skyline_count)
+		var x := lerpf(start.x - 60.0, end.x + 60.0, t)
+		var n := _stable_map_noise("horizon", str(i))
+		var h := 28.0 + n * 96.0
+		if family in ["cyber", "tokyo", "berlin"]:
+			var tower := ColorRect.new()
+			tower.name = "HorizonVertical"
+			tower.size = Vector2(12.0 + n * 18.0, h)
+			tower.position = Vector2(x, baseline - h)
+			tower.color = Color(accent.r, accent.g, accent.b, 0.10 + n * 0.10)
+			tower.z_index = -23
+			layer.add_child(tower)
+		else:
+			var spike := Polygon2D.new()
+			spike.name = "HorizonAccent"
+			spike.polygon = PackedVector2Array([
+				Vector2(x - 22.0, baseline),
+				Vector2(x, baseline - h),
+				Vector2(x + 22.0, baseline),
+			])
+			spike.color = Color(accent.r, accent.g, accent.b, 0.08 + n * 0.08)
+			spike.z_index = -23
+			layer.add_child(spike)
 
 
 func _add_ambient_motes(color: Color, amount: int) -> void:
@@ -695,6 +849,7 @@ func _add_ambient_motes(color: Color, amount: int) -> void:
 func _add_wilderness_map_details() -> void:
 	if not _world_node or not _current_map.has("data"):
 		return
+	var profile: Dictionary = _get_map_visual_profile()
 	var data: Dictionary = _current_map.data.get_data()
 	var width := float(data.get("width", 80))
 	var height := float(data.get("height", 80))
@@ -703,51 +858,164 @@ func _add_wilderness_map_details() -> void:
 	layer.z_index = -10
 	_world_node.add_child(layer)
 
-	var count := 70
+	var count := int(profile.get("ground_detail_count", 86))
 	if _tileset_type == "dungeon":
-		count = 42
+		count = mini(count, 46)
 	elif _is_endless_map_id(_current_map_id):
-		count = 92
+		count = clampi(count, 96, 132)
+	else:
+		count = clampi(count, 54, 124)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = abs((_current_map_id + ":" + str(_current_portal_depth)).hash())
 	for i in range(count):
-		var p := _iso(randf_range(4.0, width - 4.0), randf_range(4.0, height - 4.0)) + Vector2(96.0, 52.0)
-		var shard := Polygon2D.new()
-		shard.name = "GroundDetail"
-		var sx := randf_range(8.0, 22.0)
-		var sy := randf_range(2.0, 6.0)
-		shard.polygon = PackedVector2Array([
-			Vector2(-sx, 0.0), Vector2(0.0, -sy), Vector2(sx, 0.0), Vector2(0.0, sy),
-		])
-		shard.position = p
-		shard.rotation = randf_range(-0.35, 0.35)
-		shard.color = _ground_detail_color(i)
-		layer.add_child(shard)
+		var p := _iso(rng.randf_range(4.0, width - 4.0), rng.randf_range(4.0, height - 4.0)) + Vector2(96.0, 52.0)
+		var family := String(profile.get("family", "grassland"))
+		var roll := rng.randf()
+		if roll < float(profile.get("crack_density", 0.16)):
+			var crack := Line2D.new()
+			crack.name = "GroundCrack"
+			crack.width = rng.randf_range(1.2, 2.4)
+			crack.default_color = _ground_detail_color(i)
+			crack.z_index = -9
+			for j in range(4):
+				crack.add_point(p + Vector2(float(j) * rng.randf_range(10.0, 22.0), sin(float(j) * 1.4 + rng.randf()) * rng.randf_range(4.0, 12.0)))
+			layer.add_child(crack)
+		elif family == "grassland" and roll < 0.46:
+			var root := Line2D.new()
+			root.name = "RootDetail"
+			root.width = rng.randf_range(1.4, 2.8)
+			root.default_color = Color(0.16, 0.10, 0.06, 0.22)
+			root.z_index = -9
+			root.add_point(p)
+			root.add_point(p + Vector2(rng.randf_range(18.0, 36.0), rng.randf_range(-8.0, 8.0)))
+			layer.add_child(root)
+		else:
+			var shard := Polygon2D.new()
+			shard.name = "GroundDetail"
+			var sx := rng.randf_range(7.0, 20.0)
+			var sy := rng.randf_range(2.0, 6.0)
+			if family == "ruined" and i % 5 == 0:
+				sx *= 1.35
+				sy *= 1.2
+				shard.name = "RubbleDetail"
+			elif roll < float(profile.get("rune_density", 0.08)):
+				shard.name = "WornRune"
+				sx *= 0.72
+			shard.polygon = PackedVector2Array([
+				Vector2(-sx, 0.0), Vector2(0.0, -sy), Vector2(sx, 0.0), Vector2(0.0, sy),
+			])
+			shard.position = p
+			shard.rotation = rng.randf_range(-0.45, 0.45)
+			shard.color = _ground_detail_color(i)
+			shard.z_index = -9
+			layer.add_child(shard)
 
 	if _is_endless_map_id(_current_map_id):
+		_add_endless_variant_details(layer, width, height, profile)
 		_add_endless_rift_scars(layer, width, height)
 
 
 func _ground_detail_color(index: int) -> Color:
+	var profile: Dictionary = _get_map_visual_profile()
+	var identity: Color = profile.get("identity", Color(0.18, 0.30, 0.17, 1.0))
+	var secondary: Color = profile.get("secondary", Color(0.18, 0.30, 0.17, 1.0))
+	var alpha := float(profile.get("ground_alpha", 0.24)) + float(index % 4) * 0.025
 	if _tileset_type == "dungeon":
 		return Color(0.20, 0.19, 0.24, 0.38)
 	if _tileset_type == "snowplains":
 		return Color(0.72, 0.86, 1.0, 0.28)
 	if _current_map_id in ["ruined_city", "postwar_city"]:
-		return Color(0.25, 0.22, 0.19, 0.34)
-	var alpha := 0.18 + float(index % 4) * 0.035
-	return Color(0.18, 0.30, 0.17, alpha)
+		return _tinted_color(Color(0.25, 0.22, 0.19, alpha), identity, 0.18, minf(alpha + 0.06, 0.42))
+	if _is_endless_map_id(_current_map_id):
+		return _tinted_color(Color(secondary.r, secondary.g, secondary.b, alpha), identity, 0.32, minf(alpha + 0.04, 0.42))
+	return _tinted_color(Color(0.18, 0.30, 0.17, alpha), identity, 0.18, alpha)
 
 
 func _add_endless_rift_scars(parent: Node2D, width: float, height: float) -> void:
-	for i in range(7):
+	var profile: Dictionary = _get_map_visual_profile()
+	var rift_layer := Node2D.new()
+	rift_layer.name = "EndlessRiftDetails"
+	rift_layer.z_index = -8
+	parent.add_child(rift_layer)
+	var identity: Color = profile.get("identity", Color(0.42, 0.20, 1.0, 1.0))
+	var accent: Color = profile.get("accent", Color(0.68, 0.28, 1.0, 1.0))
+	var intensity := float(profile.get("rift_intensity", 0.42))
+	var count := clampi(7 + int(float(profile.get("rift_density", 0.42)) * 8.0), 7, 16)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = abs(("rift:%s:%d" % [_current_map_id, _current_portal_depth]).hash())
+	for i in range(count):
 		var scar := Line2D.new()
 		scar.name = "EndlessRiftScar"
-		scar.width = 2.0 + float(i % 3)
-		scar.default_color = Color(0.42, 0.20, 1.0, 0.34)
+		scar.width = 1.6 + float(i % 3) + intensity
+		scar.default_color = Color(identity.r, identity.g, identity.b, 0.22 + intensity * 0.20)
 		scar.z_index = -8
-		var origin := _iso(randf_range(12.0, width - 12.0), randf_range(10.0, height - 10.0)) + Vector2(96.0, 46.0)
+		var origin := _iso(rng.randf_range(12.0, width - 12.0), rng.randf_range(10.0, height - 10.0)) + Vector2(96.0, 46.0)
 		for j in range(5):
-			scar.add_point(origin + Vector2(float(j) * randf_range(14.0, 26.0), sin(float(j) * 1.7 + float(i)) * 18.0))
-		parent.add_child(scar)
+			scar.add_point(origin + Vector2(float(j) * rng.randf_range(14.0, 28.0), sin(float(j) * 1.7 + float(i)) * (14.0 + intensity * 18.0)))
+		rift_layer.add_child(scar)
+		if _current_portal_depth >= ENDLESS_START_DEPTH + 5 and i % 4 == 0:
+			var ember := Polygon2D.new()
+			ember.name = "DeepRiftPulse"
+			ember.position = origin
+			ember.polygon = PackedVector2Array([Vector2(0, -8), Vector2(20, 0), Vector2(0, 8), Vector2(-20, 0)])
+			ember.color = Color(accent.r, accent.g, accent.b, 0.12 + intensity * 0.12)
+			ember.z_index = -7
+			rift_layer.add_child(ember)
+
+
+func _add_endless_variant_details(parent: Node2D, width: float, height: float, profile: Dictionary) -> void:
+	var layer := Node2D.new()
+	layer.name = "EndlessVariantDetails"
+	layer.z_index = -9
+	parent.add_child(layer)
+	var variant := String(_get_endless_variant(_current_portal_depth).get("name", "")).to_lower()
+	var identity: Color = profile.get("identity", Color(0.72, 0.36, 1.0, 1.0))
+	var accent: Color = profile.get("accent", Color(0.40, 0.24, 0.92, 1.0))
+	var amount := clampi(14 + int(float(profile.get("rift_density", 0.42)) * 18.0), 16, 34)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = abs(("variant:%s:%d" % [variant, _current_portal_depth]).hash())
+	for i in range(amount):
+		var p := _iso(rng.randf_range(8.0, width - 8.0), rng.randf_range(8.0, height - 8.0)) + Vector2(96.0, 50.0)
+		if variant.contains("mirmidone"):
+			var hex := Line2D.new()
+			hex.name = "MyrmidonPattern"
+			hex.closed = true
+			hex.width = 1.2
+			hex.default_color = Color(accent.r, accent.g, accent.b, 0.22)
+			hex.z_index = -9
+			for j in range(6):
+				var a := TAU * float(j) / 6.0
+				hex.add_point(p + Vector2(cos(a) * 18.0, sin(a) * 9.0))
+			layer.add_child(hex)
+		elif variant.contains("ferale"):
+			var thorn := Line2D.new()
+			thorn.name = "FeralThorn"
+			thorn.width = 2.0
+			thorn.default_color = Color(identity.r, identity.g, identity.b, 0.22)
+			thorn.z_index = -9
+			thorn.add_point(p)
+			thorn.add_point(p + Vector2(rng.randf_range(16.0, 34.0), rng.randf_range(-18.0, -4.0)))
+			thorn.add_point(p + Vector2(rng.randf_range(28.0, 42.0), rng.randf_range(3.0, 18.0)))
+			layer.add_child(thorn)
+		else:
+			var mark := Polygon2D.new()
+			mark.name = "EndlessVariantMark"
+			var sx := rng.randf_range(8.0, 20.0)
+			var sy := rng.randf_range(3.0, 9.0)
+			if variant.contains("draconico"):
+				mark.name = "DraconicScale"
+				mark.polygon = PackedVector2Array([Vector2(-sx, sy), Vector2(0, -sy * 1.8), Vector2(sx, sy), Vector2(0, sy * 0.4)])
+			elif variant.contains("guerra"):
+				mark.name = "WarIronScar"
+				mark.polygon = PackedVector2Array([Vector2(-sx, -sy), Vector2(sx, -sy * 0.4), Vector2(sx * 0.8, sy), Vector2(-sx * 0.8, sy * 0.4)])
+			else:
+				mark.name = "EclipseRune"
+				mark.polygon = PackedVector2Array([Vector2(0, -sy * 2.0), Vector2(sx, 0), Vector2(0, sy * 2.0), Vector2(-sx, 0)])
+			mark.position = p
+			mark.rotation = rng.randf_range(-0.7, 0.7)
+			mark.color = Color(identity.r, identity.g, identity.b, 0.14 + rng.randf() * 0.08)
+			mark.z_index = -9
+			layer.add_child(mark)
 
 
 func _is_real_city() -> bool:
@@ -1299,6 +1567,7 @@ func _add_osm_park(points: Array[Vector2], tags: Dictionary) -> bool:
 	poly.color = _city_park_color()
 	poly.z_index = -6
 	_world_node.add_child(poly)
+	_add_park_texture_marks(polygon_points)
 	return true
 
 
@@ -1313,7 +1582,9 @@ func _add_osm_road(points: Array[Vector2], tags: Dictionary) -> bool:
 	casing.name = "OSMRoadCasing"
 	casing.points = _packed_points(line_points)
 	casing.width = _road_width(highway) + 4.0
-	casing.default_color = Color(0.06, 0.06, 0.06, 0.34)
+	var profile: Dictionary = _get_map_visual_profile()
+	var secondary: Color = profile.get("secondary", Color(0.06, 0.06, 0.06, 1.0))
+	casing.default_color = Color(secondary.r * 0.32, secondary.g * 0.32, secondary.b * 0.32, 0.28 + float(profile.get("road_detail", 0.44)) * 0.10)
 	casing.z_index = -3
 	casing.joint_mode = Line2D.LINE_JOINT_ROUND
 	casing.begin_cap_mode = Line2D.LINE_CAP_ROUND
@@ -1331,17 +1602,22 @@ func _add_osm_road(points: Array[Vector2], tags: Dictionary) -> bool:
 	line.end_cap_mode = Line2D.LINE_CAP_ROUND
 	_world_node.add_child(line)
 	_add_road_center_detail(line_points, highway)
+	if _road_width(highway) >= 17.0 and float(profile.get("road_detail", 0.44)) > 0.58:
+		_add_road_edge_ticks(line_points, highway)
 	return true
 
 
 func _add_water_highlight(points: Array[Vector2], z: int) -> void:
 	if points.size() < 3:
 		return
+	var profile: Dictionary = _get_map_visual_profile()
+	var identity: Color = profile.get("identity", Color(0.46, 0.88, 1.0, 1.0))
+	var edge := float(profile.get("water_edge", 0.32))
 	var center := _points_center(points)
 	var ring := Line2D.new()
 	ring.name = "OSMWaterHighlight"
-	ring.width = 2.0
-	ring.default_color = Color(0.46, 0.88, 1.0, 0.24)
+	ring.width = 1.6 + edge * 1.8
+	ring.default_color = Color(identity.r, identity.g, identity.b, 0.18 + edge * 0.20)
 	ring.z_index = z
 	for i in range(points.size()):
 		var p := points[i]
@@ -1357,11 +1633,14 @@ func _add_water_highlight(points: Array[Vector2], z: int) -> void:
 func _add_waterline_glint(points: Array[Vector2], width: float, z: int) -> void:
 	if points.size() < 2:
 		return
+	var profile: Dictionary = _get_map_visual_profile()
+	var identity: Color = profile.get("identity", Color(0.56, 0.92, 1.0, 1.0))
+	var edge := float(profile.get("water_edge", 0.32))
 	var glint := Line2D.new()
 	glint.name = "OSMWaterGlint"
 	glint.points = _packed_points(points)
-	glint.width = maxf(2.0, width * 0.22)
-	glint.default_color = Color(0.56, 0.92, 1.0, 0.32)
+	glint.width = maxf(2.0, width * (0.16 + edge * 0.12))
+	glint.default_color = Color(identity.r, identity.g, identity.b, 0.24 + edge * 0.22)
 	glint.z_index = z
 	glint.joint_mode = Line2D.LINE_JOINT_ROUND
 	glint.begin_cap_mode = Line2D.LINE_CAP_ROUND
@@ -1376,12 +1655,64 @@ func _add_road_center_detail(points: Array[Vector2], highway: String) -> void:
 	line.name = "OSMRoadCenterLine"
 	line.points = _packed_points(points)
 	line.width = 1.4 if highway in ["residential", "service", "living_street"] else 2.2
-	line.default_color = Color(0.92, 0.82, 0.52, 0.32) if highway in ["primary", "secondary", "tertiary"] else Color(0.82, 0.82, 0.78, 0.22)
+	var accent: Color = _profile_color("accent", Color(0.92, 0.82, 0.52, 1.0))
+	line.default_color = Color(accent.r, accent.g, accent.b, 0.30) if highway in ["primary", "secondary", "tertiary"] else Color(0.82, 0.82, 0.78, 0.22)
 	line.z_index = -1
 	line.joint_mode = Line2D.LINE_JOINT_ROUND
 	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	line.end_cap_mode = Line2D.LINE_CAP_ROUND
 	_world_node.add_child(line)
+
+
+func _add_road_edge_ticks(points: Array[Vector2], highway: String) -> void:
+	if points.size() < 2:
+		return
+	var accent: Color = _profile_color("identity", Color(0.70, 0.82, 0.92, 1.0))
+	var limit := mini(10, points.size() - 1)
+	for i in range(limit):
+		if i % 2 != 0:
+			continue
+		var a: Vector2 = points[i]
+		var b: Vector2 = points[i + 1]
+		if a.distance_to(b) < 18.0:
+			continue
+		var mid := a.lerp(b, 0.5)
+		var dir := (b - a).normalized()
+		var normal := Vector2(-dir.y, dir.x)
+		var tick := Line2D.new()
+		tick.name = "OSMRoadHierarchyMark"
+		tick.width = 1.2
+		tick.default_color = Color(accent.r, accent.g, accent.b, 0.18)
+		tick.z_index = -1
+		tick.add_point(mid - normal * 8.0)
+		tick.add_point(mid + normal * 8.0)
+		_world_node.add_child(tick)
+
+
+func _add_park_texture_marks(points: Array[Vector2]) -> void:
+	if points.size() < 3:
+		return
+	var center := _points_center(points)
+	var profile: Dictionary = _get_map_visual_profile()
+	var identity: Color = profile.get("identity", Color(0.32, 0.62, 0.28, 1.0))
+	var count := clampi(int(float(profile.get("park_mark_density", 0.55)) * 18.0), 5, 18)
+	var radius := 0.0
+	for point in points:
+		radius = maxf(radius, center.distance_to(point))
+	radius = minf(radius * 0.58, 140.0)
+	var seed: int = abs(("park:%s:%s" % [_current_map_id, str(int(center.x + center.y))]).hash())
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	for i in range(count):
+		var mark := Line2D.new()
+		mark.name = "OSMParkTexture"
+		mark.width = 1.2
+		mark.default_color = Color(identity.r, identity.g, identity.b, 0.16)
+		mark.z_index = -5
+		var p := center + Vector2(rng.randf_range(-radius, radius), rng.randf_range(-radius * 0.55, radius * 0.55))
+		mark.add_point(p + Vector2(-8.0, 0.0))
+		mark.add_point(p + Vector2(8.0, rng.randf_range(-3.0, 3.0)))
+		_world_node.add_child(mark)
 
 
 func _add_roof_highlight(points: Array[Vector2], z: int, important: bool) -> void:
@@ -1390,7 +1721,8 @@ func _add_roof_highlight(points: Array[Vector2], z: int, important: bool) -> voi
 	var outline := Line2D.new()
 	outline.name = "OSMRoofHighlight"
 	outline.width = 2.4 if important else 1.4
-	outline.default_color = Color(1.0, 0.92, 0.68, 0.24 if not important else 0.38)
+	var accent: Color = _profile_color("accent", Color(1.0, 0.92, 0.68, 1.0))
+	outline.default_color = Color(accent.r, accent.g, accent.b, 0.22 if not important else 0.40)
 	outline.z_index = z
 	for point in points:
 		outline.add_point(point)
@@ -1443,7 +1775,10 @@ func _add_osm_building(element: Dictionary, points: Array[Vector2], collision_bo
 	var roof := Polygon2D.new()
 	roof.name = "OSMBuildingRoof"
 	roof.polygon = _packed_points(top_points)
-	roof.color = _city_roof_color(style) if not important else _important_roof_color(style)
+	var roof_base := _city_roof_color(style) if not important else _important_roof_color(style)
+	var roof_variation := float(_get_map_visual_profile().get("roof_variation", 0.10))
+	var roof_noise := _stable_map_noise("roof", str(element_id))
+	roof.color = _tinted_color(roof_base, _profile_color("identity", roof_base), (roof_noise - 0.5) * roof_variation + roof_variation * 0.5)
 	roof.z_index = z
 	_world_node.add_child(roof)
 	_add_roof_highlight(top_points, z + 1, important)
@@ -1459,20 +1794,22 @@ func _add_osm_building(element: Dictionary, points: Array[Vector2], collision_bo
 	outline.z_index = z + 1
 	_world_node.add_child(outline)
 
-	if height > 84.0:
+	if height > 84.0 or (important and height > 58.0):
 		_add_building_window_strips(center, height, z + 2)
 	_add_osm_collision(collision_body, footprint, 18 if important else 12)
 	return true
 
 
 func _add_building_window_strips(center: Vector2, height: float, z: int) -> void:
-	var strips: int = clampi(int(height / 42.0), 2, 5)
+	var profile: Dictionary = _get_map_visual_profile()
+	var strips: int = clampi(int(height / 42.0 * float(profile.get("window_density", 0.55))), 1, 5)
+	var glow: Color = profile.get("accent", Color(0.95, 0.78, 0.36, 1.0))
 	for i in range(strips):
 		var stripe := ColorRect.new()
 		stripe.name = "OSMBuildingWindows"
 		stripe.size = Vector2(28, 3)
 		stripe.position = center + Vector2(8, -height + 20 + i * 25)
-		stripe.color = Color(0.95, 0.78, 0.36, 0.68)
+		stripe.color = Color(glow.r, glow.g, glow.b, 0.46 + 0.18 * float(i % 2))
 		stripe.z_index = z + i
 		_world_node.add_child(stripe)
 
@@ -1566,6 +1903,7 @@ func _road_width(highway: String) -> float:
 
 func _road_color(highway: String) -> Color:
 	var style: String = _current_map.get("city_style", "urban_3d")
+	var secondary: Color = _profile_color("secondary", Color(0.23, 0.24, 0.26, 1.0))
 	if highway in ["pedestrian", "footway", "path", "steps"]:
 		if style == "water_city":
 			return Color(0.66, 0.58, 0.43, 0.92)
@@ -1578,25 +1916,29 @@ func _road_color(highway: String) -> Color:
 		return Color(0.49, 0.43, 0.34, 0.96)
 	if style == "gothic":
 		return Color(0.32, 0.32, 0.36, 0.95)
+	if style in ["urban_3d", "dense_3d"]:
+		return Color(secondary.r * 0.82, secondary.g * 0.82, secondary.b * 0.82, 0.96)
 	return Color(0.23, 0.24, 0.26, 0.96)
 
 
 func _city_water_color() -> Color:
 	var style: String = _current_map.get("city_style", "urban_3d")
+	var identity: Color = _profile_color("identity", Color(0.04, 0.24, 0.38, 1.0))
 	if style == "water_city":
-		return Color(0.03, 0.31, 0.43, 0.94)
+		return Color(0.03, 0.31, 0.43, 0.94).lerp(identity, 0.22)
 	if style == "gothic":
-		return Color(0.08, 0.26, 0.45, 0.92)
-	return Color(0.04, 0.24, 0.38, 0.92)
+		return Color(0.08, 0.26, 0.45, 0.92).lerp(identity, 0.12)
+	return Color(0.04, 0.24, 0.38, 0.92).lerp(identity, 0.12)
 
 
 func _city_park_color() -> Color:
 	var style: String = _current_map.get("city_style", "urban_3d")
+	var identity: Color = _profile_color("identity", Color(0.18, 0.34, 0.24, 1.0))
 	if style == "ancient":
-		return Color(0.25, 0.38, 0.24, 0.70)
+		return Color(0.25, 0.38, 0.24, 0.70).lerp(identity, 0.10)
 	if style == "water_city":
-		return Color(0.22, 0.42, 0.31, 0.70)
-	return Color(0.18, 0.34, 0.24, 0.68)
+		return Color(0.22, 0.42, 0.31, 0.70).lerp(identity, 0.10)
+	return Color(0.18, 0.34, 0.24, 0.68).lerp(identity, 0.08)
 
 
 func _city_label_color() -> Color:
@@ -1743,8 +2085,8 @@ func _add_osm_label(text: String, pos: Vector2, color: Color, z: int, label_seen
 	lb.position = pos
 	lb.add_theme_color_override("font_color", color)
 	lb.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.92))
-	lb.add_theme_constant_override("outline_size", 4)
-	lb.add_theme_font_size_override("font_size", 12)
+	lb.add_theme_constant_override("outline_size", 3)
+	lb.add_theme_font_size_override("font_size", 11)
 	lb.z_index = z
 	_world_node.add_child(lb)
 	return true
@@ -1787,22 +2129,23 @@ func _add_city_landmarks() -> void:
 	header.name = "RealCityHeader"
 	header.text = "REAL CITY / GIS - " + String(title).to_upper()
 	header.position = _iso(39, 31) + Vector2(-70, -190)
-	header.add_theme_color_override("font_color", Color(0.88, 0.94, 1.0))
+	header.add_theme_color_override("font_color", _profile_color("identity", Color(0.88, 0.94, 1.0)))
 	header.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
 	header.add_theme_constant_override("outline_size", 5)
-	header.add_theme_font_size_override("font_size", 26)
-	header.z_index = 3600
+	header.add_theme_font_size_override("font_size", 22)
+	header.z_index = 3000
 	_world_node.add_child(header)
 
 	for marker in markers:
 		var p: Vector2 = marker["pos"]
 		var world := _iso(p.x, p.y)
 		var beacon := Polygon2D.new()
-		beacon.name = "CityLandmarkBeacon"
-		beacon.polygon = PackedVector2Array([Vector2(0, -55), Vector2(18, 0), Vector2(0, 18), Vector2(-18, 0)])
+		beacon.name = "LandmarkVisual"
+		beacon.polygon = PackedVector2Array([Vector2(0, -42), Vector2(14, 0), Vector2(0, 14), Vector2(-14, 0)])
 		beacon.position = world + Vector2(96, -28)
-		beacon.color = marker["color"]
-		beacon.z_index = 3650
+		var marker_color: Color = marker["color"]
+		beacon.color = Color(marker_color.r, marker_color.g, marker_color.b, 0.78)
+		beacon.z_index = 3002
 		_world_node.add_child(beacon)
 
 		var lb := Label.new()
@@ -1811,9 +2154,9 @@ func _add_city_landmarks() -> void:
 		lb.position = world + Vector2(42, -104)
 		lb.add_theme_color_override("font_color", marker["color"])
 		lb.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-		lb.add_theme_constant_override("outline_size", 4)
-		lb.add_theme_font_size_override("font_size", 14 if style != "dense_3d" else 16)
-		lb.z_index = 3651
+		lb.add_theme_constant_override("outline_size", 3)
+		lb.add_theme_font_size_override("font_size", 12 if style != "dense_3d" else 14)
+		lb.z_index = 3003
 		_world_node.add_child(lb)
 
 	_add_city_specific_monuments()
@@ -3125,12 +3468,16 @@ func _build_portals() -> void:
 		var type_color: Color = portal_type_info.get("color", Color(0.55, 0.92, 1.0))
 		var ring_color: Color = portal_type_info.get("ring_tint", Color(0.70, 0.24, 1.0, 0.72))
 		var outer_ring_color: Color = portal_type_info.get("portal_tint", Color(0.18, 0.86, 1.0, 0.86))
+		var portal_palette := _portal_variant_palette(target, type_color, ring_color, outer_ring_color)
+		type_color = portal_palette.get("label", type_color)
+		ring_color = portal_palette.get("ring", ring_color)
+		outer_ring_color = portal_palette.get("outer", outer_ring_color)
 
 		var portal := Node2D.new(); portal.name = "Rift_" + target; portal.position = pos
 
 		var outer := ColorRect.new()
 		outer.size = Vector2(92, 92); outer.position = Vector2(-46, -46)
-		outer.color = Color(0.05, 0.02, 0.12, 0.34); outer.pivot_offset = Vector2(46, 46)
+		outer.color = Color(ring_color.r * 0.18, ring_color.g * 0.18, ring_color.b * 0.18, 0.34); outer.pivot_offset = Vector2(46, 46)
 		portal.add_child(outer)
 
 		var inner := ColorRect.new()
@@ -3139,7 +3486,7 @@ func _build_portals() -> void:
 		portal.add_child(inner)
 		portal.add_child(_make_portal_ring(56.0, outer_ring_color, 4.0, 0.64))
 		portal.add_child(_make_portal_ring(36.0, ring_color, 3.0, 0.72))
-		_add_portal_shards(portal)
+		_add_portal_shards(portal, ring_color, int(portal_palette.get("spark_count", 5)))
 
 		var lb := Label.new(); lb.name = "Label"
 		lb.text = type_name + "\n" + label
@@ -3185,7 +3532,43 @@ func _make_portal_ring(radius: float, color: Color, width: float, squash: float)
 	return ring
 
 
-func _add_portal_shards(portal: Node2D) -> void:
+func _portal_variant_palette(target: String, type_color: Color, ring_color: Color, outer_ring_color: Color) -> Dictionary:
+	var variant_name := ""
+	if _is_endless_map_id(target):
+		variant_name = String(_get_endless_variant(_parse_endless_depth(target)).get("name", "")).to_lower()
+	elif _is_endless_map_id(_current_map_id):
+		variant_name = String(_get_endless_variant(_current_portal_depth).get("name", "")).to_lower()
+	if variant_name.is_empty():
+		return {"label": type_color, "ring": ring_color, "outer": outer_ring_color, "spark_count": 5}
+	var label := type_color
+	var ring := ring_color
+	var outer := outer_ring_color
+	if variant_name.contains("eclisse"):
+		label = Color(0.84, 0.58, 1.0, 1.0)
+		ring = Color(0.58, 0.25, 1.0, 0.78)
+		outer = Color(0.28, 0.18, 0.88, 0.84)
+	elif variant_name.contains("ferale"):
+		label = Color(0.62, 1.0, 0.38, 1.0)
+		ring = Color(0.32, 0.82, 0.26, 0.78)
+		outer = Color(0.74, 0.48, 0.16, 0.82)
+	elif variant_name.contains("mirmidone"):
+		label = Color(0.88, 0.76, 0.42, 1.0)
+		ring = Color(0.78, 0.62, 0.26, 0.78)
+		outer = Color(0.18, 0.76, 0.82, 0.82)
+	elif variant_name.contains("draconico"):
+		label = Color(1.0, 0.64, 0.28, 1.0)
+		ring = Color(1.0, 0.32, 0.18, 0.78)
+		outer = Color(1.0, 0.72, 0.22, 0.82)
+	elif variant_name.contains("guerra"):
+		label = Color(0.96, 0.30, 0.24, 1.0)
+		ring = Color(0.70, 0.16, 0.14, 0.78)
+		outer = Color(0.70, 0.68, 0.62, 0.82)
+	var depth := _parse_endless_depth(target) if _is_endless_map_id(target) else _current_portal_depth
+	var spark_count := clampi(6 + int(maxi(depth - ENDLESS_START_DEPTH, 0) / 3), 6, 12)
+	return {"label": label, "ring": ring, "outer": outer, "spark_count": spark_count}
+
+
+func _add_portal_shards(portal: Node2D, color: Color = Color(0.68, 0.24, 1.0, 0.42), spark_count: int = 5) -> void:
 	for i in range(5):
 		var shard := Polygon2D.new()
 		shard.name = "PortalShard"
@@ -3194,9 +3577,25 @@ func _add_portal_shards(portal: Node2D) -> void:
 		shard.position = p
 		shard.rotation = a
 		shard.polygon = PackedVector2Array([Vector2(-4, 0), Vector2(0, -15), Vector2(5, 2), Vector2(0, 8)])
-		shard.color = Color(0.68, 0.24, 1.0, 0.42)
+		shard.color = Color(color.r, color.g, color.b, 0.42)
 		shard.z_index = 3049
 		portal.add_child(shard)
+	var sparks := Node2D.new()
+	sparks.name = "PortalVariantSparks"
+	sparks.z_index = 3051
+	portal.add_child(sparks)
+	for i in range(clampi(spark_count, 3, 12)):
+		var spark := Line2D.new()
+		spark.name = "PortalSpark"
+		var a := TAU * float(i) / float(maxi(spark_count, 1))
+		var inner := Vector2(cos(a) * 42.0, sin(a) * 27.0)
+		var outer := Vector2(cos(a) * 68.0, sin(a) * 43.0)
+		spark.add_point(inner)
+		spark.add_point(outer)
+		spark.width = 1.4
+		spark.default_color = Color(color.r, color.g, color.b, 0.34)
+		spark.z_index = 3051
+		sparks.add_child(spark)
 
 
 func _on_portal_proximity(body: Node2D, target: String) -> void:
