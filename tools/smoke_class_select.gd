@@ -22,6 +22,8 @@ func _initialize() -> void:
 
 	for check in CLASS_CHECKS:
 		var cid: String = check["id"]
+		if sm:
+			sm.delete_save()
 		if pd:
 			pd.set_class(cid)
 
