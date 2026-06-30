@@ -34,6 +34,10 @@ signal skill_status_changed(skill_id: String, ready: bool, cooldown_left: float,
 @export var guardian_shield_duration: float = 3.0
 @export var guardian_shield_reduction: float = 0.55
 
+const MOVE_SPEED_SOFT_CAP_START: float = 720.0
+const MOVE_SPEED_SOFT_CAP_SCALE: float = 4.5
+const MOVE_SPEED_HARD_CAP: float = 860.0
+
 # Leveling system
 var level: int = 1
 var xp: int = 0
@@ -631,9 +635,10 @@ func _item_get(item, property_name: String, default_value = null):
 
 
 func _soft_cap_move_speed(raw_speed: float) -> float:
-	if raw_speed <= 950.0:
+	if raw_speed <= MOVE_SPEED_SOFT_CAP_START:
 		return raw_speed
-	return 950.0 + sqrt(raw_speed - 950.0) * 8.0
+	var softened := MOVE_SPEED_SOFT_CAP_START + sqrt(raw_speed - MOVE_SPEED_SOFT_CAP_START) * MOVE_SPEED_SOFT_CAP_SCALE
+	return minf(softened, MOVE_SPEED_HARD_CAP)
 
 
 func _rebuild_equipment_effects() -> void:

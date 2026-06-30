@@ -192,7 +192,7 @@ func _save_probe(main: Node) -> void:
 
 
 func _check_stat_breakpoints(player: Node) -> void:
-	if int(player.get("move_speed")) > 1800:
+	if int(player.get("move_speed")) > 860:
 		warnings.append("move_speed exceeds controllable range: %d" % int(player.get("move_speed")))
 	if int(player.get("attack_damage")) > 2500:
 		warnings.append("attack damage likely trivializes combat: %d" % int(player.get("attack_damage")))

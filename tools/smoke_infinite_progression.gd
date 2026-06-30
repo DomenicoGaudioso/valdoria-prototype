@@ -8,6 +8,7 @@ const ItemDataClass := preload("res://scripts/items/ItemData.gd")
 func _initialize() -> void:
 	var failed: Array[String] = []
 	_check_xp_curve(failed)
+	_check_player_speed_cap(failed)
 	await _check_endless_rewards_and_save(failed)
 
 	if failed.is_empty():
@@ -37,6 +38,22 @@ func _check_xp_curve(failed: Array[String]) -> void:
 		if thresholds.has(level) and required > int(thresholds[level]):
 			failed.append("level %d xp_to_next too high: %d" % [level, required])
 		previous = required
+	player.queue_free()
+
+
+func _check_player_speed_cap(failed: Array[String]) -> void:
+	var player := PlayerClass.new()
+	var early_speed := float(player.call("_soft_cap_move_speed", 360.0))
+	if absf(early_speed - 360.0) > 0.01:
+		failed.append("early move speed should remain uncapped: %.2f" % early_speed)
+	var late_speed := float(player.call("_soft_cap_move_speed", 1300.0))
+	if late_speed > 860.0:
+		failed.append("late move speed exceeds hard cap: %.2f" % late_speed)
+	if late_speed < 780.0:
+		failed.append("late move speed cap is too severe: %.2f" % late_speed)
+	var extreme_speed := float(player.call("_soft_cap_move_speed", 5000.0))
+	if extreme_speed > 860.0:
+		failed.append("extreme move speed exceeds hard cap: %.2f" % extreme_speed)
 	player.queue_free()
 
 
