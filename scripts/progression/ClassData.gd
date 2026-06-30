@@ -28,8 +28,12 @@ var bonus_stats: Dictionary = {
 var _class_definitions: Dictionary = {}
 
 
-func _ready() -> void:
+func _init() -> void:
 	_define_classes()
+
+
+func _ready() -> void:
+	pass
 
 
 func _define_classes() -> void:

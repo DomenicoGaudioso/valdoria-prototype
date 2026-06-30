@@ -93,6 +93,7 @@ func save_game(player, map_id: String) -> void:
 		"defense": player.get("defense"),
 		"agility": player.get("agility"),
 		"gold": player.gold,
+		"class_id": _read_current_class_id(),
 		"equipment": {},
 		"inventory": [],
 	}
@@ -191,6 +192,13 @@ func _item_get(item, property_name: String, default_value = null):
 		return default_value
 	var value = item.get(property_name)
 	return default_value if value == null else value
+
+
+func _read_current_class_id() -> String:
+	var pd := get_node_or_null("/root/PlayerData")
+	if pd:
+		return String(pd.get("player_class_id"))
+	return "arena_champion"
 
 
 func _protect_highest_progress(data: Dictionary, previous: Dictionary) -> Dictionary:

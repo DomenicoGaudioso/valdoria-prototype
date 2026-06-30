@@ -34,7 +34,8 @@ const WORLD := {
 const HEROES: Array[Dictionary] = [
 	{
 		"id": "kael_morvant",
-		"name": "Kael Morvant",
+		"name": "Kael",
+		"surname": "Morvant",
 		"title": "Necromante dell'Eclisse",
 		"class_ref": "crimson_heir",
 		"role": "evocatore_controllo",
@@ -79,7 +80,8 @@ const HEROES: Array[Dictionary] = [
 	},
 	{
 		"id": "seren_veyra",
-		"name": "Seren Veyra",
+		"name": "Seren",
+		"surname": "Veyra",
 		"title": "Lama Astrale",
 		"class_ref": "shadow_blade",
 		"role": "assassina_mobilità",
@@ -124,7 +126,8 @@ const HEROES: Array[Dictionary] = [
 	},
 	{
 		"id": "brann_kord",
-		"name": "Brann Kord",
+		"name": "Brann",
+		"surname": "Kord",
 		"title": "Guardiano Runico",
 		"class_ref": "arena_champion",
 		"role": "tank_protezione",
@@ -170,7 +173,8 @@ const HEROES: Array[Dictionary] = [
 	},
 	{
 		"id": "nyra_solen",
-		"name": "Nyra Solen",
+		"name": "Nyra",
+		"surname": "Solen",
 		"title": "Cacciatrice Chimera",
 		"class_ref": "wood_warden",
 		"role": "ranger_ibrida",
@@ -215,7 +219,8 @@ const HEROES: Array[Dictionary] = [
 	},
 	{
 		"id": "elios_var",
-		"name": "Elios Var",
+		"name": "Elios",
+		"surname": "Var",
 		"title": "Arconte Spezzato",
 		"class_ref": "battle_arcanist",
 		"role": "mago_instabile",
